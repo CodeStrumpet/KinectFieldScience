@@ -298,6 +298,9 @@ public void saveDataForSiteJSON(String siteID) {
   
   */
   
+  //opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+  //opencv.image().save(OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth_" + currSiteID + ".jpg");
+  
   //context.depthImage().save(absolutePath);
   //String rgbPath = savePath("rgb_image_" + currSiteID + ".jpg");
   //context.rgbImage().save(rgbPath);
