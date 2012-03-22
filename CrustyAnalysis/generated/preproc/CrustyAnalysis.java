@@ -35,6 +35,7 @@ OpenCV opencv;
 PFont f;
 int windowWidth = 0; 
 int windowHeight = 0;
+int imageRegionPadding = 10;
 int textRegionHeight = 300;
 String debugLog = "";
 
@@ -100,7 +101,7 @@ if(TRUE == isSupported)
    // create buffer for openCV
    opencv.allocate(640, 480);
     
-  windowWidth = context.depthWidth() + context.rgbWidth() + 10;
+  windowWidth = context.depthWidth() + context.rgbWidth() + imageRegionPadding;
   windowHeight = context.rgbHeight() + textRegionHeight; 
  
   // create window
@@ -114,13 +115,52 @@ public void draw()
   
   background(200,0,0);
   
-  //opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
-	  
-  // draw depthImageMap
-  image(context.depthImage(),0,0);
+  if (enableOpenCV) {
+  	
+  	opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+  	
+  	//opencv.threshold(80);
+ 
+  	//opencv.absDiff();
+ 
+  	image(opencv.image(), 0, 0, 640, 480);
+ 
+ 	Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+    // draw blob results
+    for( int i=0; i<blobs.length; i++ ) {
+        beginShape();
+        for( int j=0; j<blobs[i].points.length; j++ ) {
+            vertex( blobs[i].points[j].x, blobs[i].points[j].y );
+        }
+        endShape(CLOSE);
+    }
+    
+    opencv.copy(context.rgbImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+  	
+  	opencv.threshold(rgbThreshold);
+ 
+  	image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
+ 
+ 	blobs = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+ 	
+    // draw blob results
+    for( int i=0; i<blobs.length; i++ ) {
+        beginShape();
+        for( int j=0; j<blobs[i].points.length; j++ ) {
+            vertex( blobs[i].points[j].x + 640 + imageRegionPadding, blobs[i].points[j].y );
+        }
+        endShape(CLOSE);
+    }
+    
+  } else {
+  	// draw depthImageMap
+  	image(context.depthImage(),0,0);
   
-  // draw irImageMap
-  image(context.rgbImage(),context.depthWidth() + 10,0);
+  	// draw irImageMap
+  	image(context.rgbImage(),context.depthWidth() + 10,0);	
+  }  
+  
+  
     
   // draw adjustment variables
   drawAdjustmentVariablesRegion();
