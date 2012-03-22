@@ -32,14 +32,17 @@ PFont f;
 int windowWidth = 0; 
 int windowHeight = 0;
 int textRegionHeight = 300;
-String currSiteID = "";
 String debugLog = "";
 
+final String OUTPUT_DIRECTORY = "output";
+
+final String SITE_ID_KEY = "siteID";
 final String DEPTH_MAX_DIST_KEY = "depthMaxDist";
 final String RGB_THRESHOLD_KEY = "rgbThreshold";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 
-String[] adjustmentVariableNames = {DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, MIN_BLOB_AREA_KEY};
+String[] adjustmentVariableNames = {SITE_ID_KEY, DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, MIN_BLOB_AREA_KEY};
+String currSiteID = "";
 float depthMaxDist = 0.0f;
 float rgbThreshold = 0.0f;
 float minBlobArea = 0.0f;
@@ -156,7 +159,7 @@ Prints the Depth data as JSON in the following format:
 */
 public void saveDataForSiteJSON(String siteID) {
   
-  String fileName = currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
+  String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
   println("Creating file:  " + fileName);
   PrintWriter depthOut = createWriter(fileName);
   
@@ -178,7 +181,7 @@ public void saveDataForSiteJSON(String siteID) {
   depthOut.flush();
   depthOut.close();
   
-  SaveJpg(currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+  SaveJpg(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
  
  /* 
   String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
@@ -297,7 +300,9 @@ public void SaveJpg(String fname){
 
 public String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 	
-	if (adjustmentVariableName.equalsIgnoreCase(DEPTH_MAX_DIST_KEY)) {
+	if (adjustmentVariableName.equalsIgnoreCase(SITE_ID_KEY)) {
+		return currSiteID;
+	} else if (adjustmentVariableName.equalsIgnoreCase(DEPTH_MAX_DIST_KEY)) {
 		return Float.toString(depthMaxDist); 
 	} else if (adjustmentVariableName.equalsIgnoreCase(RGB_THRESHOLD_KEY)) {
 		return Float.toString(rgbThreshold);
