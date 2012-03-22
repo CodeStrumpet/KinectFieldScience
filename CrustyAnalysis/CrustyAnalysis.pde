@@ -1,9 +1,12 @@
 import SimpleOpenNI.*;
 import com.sun.image.codec.jpeg.*;
-
+import hypermedia.video.*;
 import java.awt.image.BufferedImage;
-SimpleOpenNI  context; 
 
+
+
+SimpleOpenNI  context; 
+OpenCV opencv;
 
 PFont f;
 int windowWidth = 0; 
@@ -16,12 +19,14 @@ final String OUTPUT_DIRECTORY = "output";
 final String SITE_ID_KEY = "siteID";
 final String DEPTH_MAX_DIST_KEY = "depthMaxDist  ('<' , '>')";
 final String RGB_THRESHOLD_KEY = "rgbThreshold  ('-' , '+')";
+final String ENABLE_OPEN_CV = "enableOpenCV  ('~')";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 
-String[] adjustmentVariableNames = {SITE_ID_KEY, DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, MIN_BLOB_AREA_KEY};
+String[] adjustmentVariableNames = {SITE_ID_KEY, DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY};
 String currSiteID = "";
 float depthMaxDist = 0.0;
 float rgbThreshold = 0.0;
+boolean enableOpenCV = false;
 float minBlobArea = 0.0;
 
 void setup()
@@ -32,6 +37,9 @@ void setup()
   
   // create kinect context
   context = new SimpleOpenNI(this);
+
+	// create OpenCV instance
+	opencv = new OpenCV(this);
   
   /*   AlternativeViewPoint????!
   XnBool isSupported = context.IsCapabilitySupported("AlternativeViewPoint"); 
@@ -49,31 +57,29 @@ if(TRUE == isSupported)
   // mirror is by default enabled
   context.setMirror(true);
   
+  // enable lining up depth and rgb data
   context.alternativeViewPointDepthToImage();
+  
   // enable depthMap generation 
-  if(context.enableDepth() == false)
-  {
+  if(context.enableDepth() == false) {
      println("Can't open the depthMap, maybe the camera is not connected!"); 
      exit();
      return;
   }
   
-  // enable ir generation
-  //context.enableRGB(640,480,30);
-  //context.enableRGB(1280,1024,15);  
-  if(context.enableRGB() == false)
-  {
+  if(context.enableRGB() == false) {
      println("Can't open the rgbMap, maybe the camera is not connected or there is no rgbSensor!"); 
      exit();
      return;
   }
-  
-  // Setup font for drawing text
-  //f = loadFont("ArialMT-16.vlw");
-  
+    
+   // create buffer for openCV
+   opencv.allocate(640, 480);
+    
   windowWidth = context.depthWidth() + context.rgbWidth() + 10;
   windowHeight = context.rgbHeight() + textRegionHeight; 
  
+  // create window
   size(windowWidth, windowHeight);
 }
 
@@ -84,6 +90,8 @@ void draw()
   
   background(200,0,0);
   
+  //opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+	  
   // draw depthImageMap
   image(context.depthImage(),0,0);
   
@@ -147,6 +155,8 @@ void keyPressed() {
   		rgbThreshold += rgbThresholdIncrementValue;	
   	}
   	println("plus");
+  } else if (key == '~' || key == '`') {
+  	enableOpenCV = !enableOpenCV;
   } else {
      currSiteID = currSiteID + key;
   }
@@ -173,10 +183,14 @@ int minBlobAreaMaxValue = 640 * 480;
 int minBlobAreaIncrmentValue = 100;
 int minBlobAreaDefaultValue = 100;
 
+boolean enableOpenCVDefaultValue = false;
+
 void setDefaultAdjustmentVariableValues() {
 	depthMaxDist = depthMaxDistDefaultValue;
 	rgbThreshold = rgbThresholdDefaultValue;
 	minBlobArea = minBlobAreaDefaultValue;
+	
+	enableOpenCV = enableOpenCVDefaultValue;
 }
 
 /**
@@ -334,6 +348,8 @@ String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 		return Float.toString(rgbThreshold);
 	} else if (adjustmentVariableName.equalsIgnoreCase(MIN_BLOB_AREA_KEY)) {
 		return Float.toString(minBlobArea);
+	} else if (adjustmentVariableName.equalsIgnoreCase(ENABLE_OPEN_CV)) {
+		return enableOpenCV ? "True" : "False";
 	} else {
 		return "Unknown NO Match";
 	}
