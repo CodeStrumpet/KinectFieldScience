@@ -1,7 +1,30 @@
-import SimpleOpenNI.*;
-import com.sun.image.codec.jpeg.*;
+import processing.core.*; 
+import processing.xml.*; 
 
-import java.awt.image.BufferedImage;
+import SimpleOpenNI.*; 
+import com.sun.image.codec.jpeg.*; 
+import java.awt.image.BufferedImage; 
+
+import java.applet.*; 
+import java.awt.Dimension; 
+import java.awt.Frame; 
+import java.awt.event.MouseEvent; 
+import java.awt.event.KeyEvent; 
+import java.awt.event.FocusEvent; 
+import java.awt.Image; 
+import java.io.*; 
+import java.net.*; 
+import java.text.*; 
+import java.util.*; 
+import java.util.zip.*; 
+import java.util.regex.*; 
+
+public class CrustyAnalysis extends PApplet {
+
+
+
+
+
 SimpleOpenNI  context; 
 
 
@@ -17,11 +40,11 @@ final String RGB_THRESHOLD_KEY = "rgbThreshold";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 
 String[] adjustmentVariableNames = {DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, MIN_BLOB_AREA_KEY};
-float depthMaxDist = 0.0;
-float rgbThreshold = 0.0;
-float minBlobArea = 0.0;
+float depthMaxDist = 0.0f;
+float rgbThreshold = 0.0f;
+float minBlobArea = 0.0f;
 
-void setup()
+public void setup()
 {
 	
   println(adjustmentVariableValueForVariableName(DEPTH_MAX_DIST_KEY));
@@ -72,7 +95,7 @@ if(TRUE == isSupported)
   size(windowWidth, windowHeight);
 }
 
-void draw()
+public void draw()
 {
   // update the cam
   context.update();
@@ -89,7 +112,7 @@ void draw()
   drawAdjustmentVariablesRegion();
 }
 
-void drawAdjustmentVariablesRegion() {
+public void drawAdjustmentVariablesRegion() {
 	  
   fill(30, 30, 30);
   rect(0, windowHeight - textRegionHeight, windowWidth, windowHeight);
@@ -113,7 +136,7 @@ void drawAdjustmentVariablesRegion() {
   //text(currSiteID, 20, windowHeight - (textRegionHeight / 2));	
 }
 
-void keyPressed() { 
+public void keyPressed() { 
   if (key == '\b') {
       if (currSiteID.length() > 0) {
         currSiteID = currSiteID.substring(0, currSiteID.length() - 1);
@@ -131,7 +154,7 @@ void keyPressed() {
 Prints the Depth data as JSON in the following format:
 {"location_id" : 27, "depth_map" : [0, 1, 2]}
 */
-void saveDataForSiteJSON(String siteID) {
+public void saveDataForSiteJSON(String siteID) {
   
   String fileName = currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
   println("Creating file:  " + fileName);
@@ -175,7 +198,7 @@ void saveDataForSiteJSON(String siteID) {
 
 
 // Placeholder
-void saveDataForSiteCSV(String siteID) {
+public void saveDataForSiteCSV(String siteID) {
   
   String fileName = currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
   println("Creating file:  " + fileName);
@@ -218,7 +241,7 @@ void saveDataForSiteCSV(String siteID) {
 }
 
 
-void printJSONArrayToOutput(int [] array, PrintWriter out) {
+public void printJSONArrayToOutput(int [] array, PrintWriter out) {
   out.print("[");
   for (int i = 0; i < array.length; i++) {
     if (i == 0) {
@@ -230,13 +253,13 @@ void printJSONArrayToOutput(int [] array, PrintWriter out) {
   out.print("]");
 }
 
-void printJSONStringStringKeyValuePair(String key, String value, PrintWriter out) {
+public void printJSONStringStringKeyValuePair(String key, String value, PrintWriter out) {
   out.print("\"" + key + "\"");
   out.print(" : ");
    out.print("\"" + value + "\"");
 }
 
-void printJSONStringIntKeyValuePair(String key, int value, PrintWriter out) {
+public void printJSONStringIntKeyValuePair(String key, int value, PrintWriter out) {
   out.print("\"" + key + "\"");
   out.print(" : ");
    out.print(value);
@@ -244,7 +267,7 @@ void printJSONStringIntKeyValuePair(String key, int value, PrintWriter out) {
 
 
 
-void SaveJpg(String fname){
+public void SaveJpg(String fname){
   ByteArrayOutputStream out = new ByteArrayOutputStream();
   BufferedImage img = new BufferedImage(width, height, 2);
   img = (BufferedImage)createImage(width, height);
@@ -272,7 +295,7 @@ void SaveJpg(String fname){
 }
  
 
-String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
+public String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 	
 	if (adjustmentVariableName.equalsIgnoreCase(DEPTH_MAX_DIST_KEY)) {
 		return Float.toString(depthMaxDist); 
@@ -283,4 +306,9 @@ String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 	} else {
 		return "Unknown NO Match";
 	}
+}
+
+    static public void main(String args[]) {
+        PApplet.main(new String[] { "--bgcolor=#ECE9D8", "CrustyAnalysis" });
+    }
 }
