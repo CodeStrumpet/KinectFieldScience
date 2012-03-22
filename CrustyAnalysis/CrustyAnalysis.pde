@@ -14,8 +14,8 @@ String debugLog = "";
 final String OUTPUT_DIRECTORY = "output";
 
 final String SITE_ID_KEY = "siteID";
-final String DEPTH_MAX_DIST_KEY = "depthMaxDist";
-final String RGB_THRESHOLD_KEY = "rgbThreshold";
+final String DEPTH_MAX_DIST_KEY = "depthMaxDist  ('<' , '>')";
+final String RGB_THRESHOLD_KEY = "rgbThreshold  ('-' , '+')";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 
 String[] adjustmentVariableNames = {SITE_ID_KEY, DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, MIN_BLOB_AREA_KEY};
@@ -27,8 +27,10 @@ float minBlobArea = 0.0;
 void setup()
 {
 	
-  println(adjustmentVariableValueForVariableName(DEPTH_MAX_DIST_KEY));
-	
+  // set default values
+  setDefaultAdjustmentVariableValues();
+  
+  // create kinect context
   context = new SimpleOpenNI(this);
   
   /*   AlternativeViewPoint????!
@@ -97,7 +99,7 @@ void drawAdjustmentVariablesRegion() {
   fill(30, 30, 30);
   rect(0, windowHeight - textRegionHeight, windowWidth, windowHeight);
   
-  int variableNameColumnWidth = 100;
+  int variableNameColumnWidth = 150;
   int rowHeight = textRegionHeight / adjustmentVariableNames.length;
   int leftPadding = 15; 
   int startPosition = windowHeight - textRegionHeight;
@@ -125,17 +127,56 @@ void keyPressed() {
     if (currSiteID != "") {
       saveDataForSiteJSON(currSiteID);
     }
-  } else if (key == '<' || key == ',') {
+  } else if (key == '<' || key == ',') { // depthMaxDist
+  	if (depthMaxDist - depthMaxDistIncrementValue >= depthMaxDistMinValue) {
+  		depthMaxDist -= depthMaxDistIncrementValue;
+  	} 
   	println("leftSign");
-  } else if (key == '>' || key == '.') {
+  } else if (key == '>' || key == '.') { // depthMaxDist
+  	if (depthMaxDist + depthMaxDistIncrementValue <= depthMaxDistMaxValue) {
+  		depthMaxDist += depthMaxDistIncrementValue;
+  	} 
   	println("rightSign");
-  } else if (key == '-') {
+  } else if (key == '-') { // rgbThreshold
+  	if (rgbThreshold - rgbThresholdIncrementValue >= rgbThresholdMinValue) {
+  		rgbThreshold -= rgbThresholdIncrementValue;	
+  	}
   	println("minus");
-  } else if (key == '=' || key == '+') {
+  } else if (key == '=' || key == '+') { // rgbThreshold
+  	if (rgbThreshold + rgbThresholdIncrementValue <= rgbThresholdMaxValue) {
+  		rgbThreshold += rgbThresholdIncrementValue;	
+  	}
   	println("plus");
   } else {
      currSiteID = currSiteID + key;
   }
+}
+
+/*
+float depthMaxDist = 0.0;
+float rgbThreshold = 0.0;
+float minBlobArea = 0.0;
+*/
+
+int depthMaxDistMinValue = 300;
+int depthMaxDistMaxValue = 3000;
+int depthMaxDistIncrementValue = 10;
+int depthMaxDistDefaultValue = 2000; // default
+
+int rgbThresholdMinValue = 0;
+int rgbThresholdMaxValue = 255;
+int rgbThresholdIncrementValue = 5;
+int rgbThresholdDefaultValue = 80; // default
+
+int minBlobAreaMinValue = 4;
+int minBlobAreaMaxValue = 640 * 480;
+int minBlobAreaIncrmentValue = 100;
+int minBlobAreaDefaultValue = 100;
+
+void setDefaultAdjustmentVariableValues() {
+	depthMaxDist = depthMaxDistDefaultValue;
+	rgbThreshold = rgbThresholdDefaultValue;
+	minBlobArea = minBlobAreaDefaultValue;
 }
 
 /**
