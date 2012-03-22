@@ -148,6 +148,14 @@ public void keyPressed() {
     if (currSiteID != "") {
       saveDataForSiteJSON(currSiteID);
     }
+  } else if (key == '<' || key == ',') {
+  	println("leftSign");
+  } else if (key == '>' || key == '.') {
+  	println("rightSign");
+  } else if (key == '-') {
+  	println("minus");
+  } else if (key == '=' || key == '+') {
+  	println("plus");
   } else {
      currSiteID = currSiteID + key;
   }
