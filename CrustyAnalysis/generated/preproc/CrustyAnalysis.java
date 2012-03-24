@@ -59,6 +59,7 @@ boolean enableOpenCV = false;
 float minBlobArea = 0.0f;
 
 boolean canUseConnectedSensor = true;
+PImage sourceImage = null;
 
 public void setup()
 {
@@ -175,7 +176,17 @@ public void draw()
 
 
 	} else {
-		// do nothing for now
+		// load image if necessary
+		if (updateSourceImage) {
+			sourceImage = loadImage(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+			updateSourceImage = false;
+			println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
+		}
+
+		// draw it if we've got it
+		if (sourceImage != null) {
+			image(sourceImage, 0, 0);	
+		}
 	}
 
 
