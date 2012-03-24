@@ -5,6 +5,7 @@ import SimpleOpenNI.*;
 import com.sun.image.codec.jpeg.*; 
 import hypermedia.video.*; 
 import java.awt.image.BufferedImage; 
+import org.json.*; 
 
 import java.applet.*; 
 import java.awt.Dimension; 
@@ -21,6 +22,7 @@ import java.util.zip.*;
 import java.util.regex.*; 
 
 public class CrustyAnalysis extends PApplet {
+
 
 
 
@@ -60,6 +62,7 @@ float minBlobArea = 0.0f;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
+int[] sourceDepthPixels = null;
 
 public void setup()
 {
@@ -157,6 +160,29 @@ public void draw()
 			sourceImage = loadImage(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
 			updateSourceImage = false;
 			println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
+			
+			
+			String[] rawDepthStrings = loadStrings(OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth.json");
+			if (rawDepthStrings != null) {
+				println("Number of strings " + rawDepthStrings.length);
+				
+				/*
+				try {
+					//JSONObject nytData = new JSONObject(join(loadStrings(request), ""));
+					//JSONArray results = nytData.getJSONArray("results");
+					//total = nytData.getInt("total");
+					//println ("There were " + total + " occurences of the term " + word + " between " + beginDate + " and " + endDate);
+					}
+				catch (JSONException e) {
+					println ("There was an error parsing the JSONObject.");
+				
+				}
+				*/
+								
+			} else {
+				println("Failed to load raw depth strings");
+			}
+									
 		}
 
 		// use it if we've got it
