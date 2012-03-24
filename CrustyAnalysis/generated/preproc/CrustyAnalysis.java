@@ -130,41 +130,17 @@ public void draw()
 		background(200,0,0);
 
 		if (enableOpenCV) {
-
+			// copy depth data into opencv buffer
 			opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
-
-			//opencv.threshold(80);
-
-			//opencv.absDiff();
-
-			image(opencv.image(), 0, 0, 640, 480);
-
-			Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
-			// draw blob results
-			for( int i=0; i<blobs.length; i++ ) {
-				beginShape();
-				for( int j=0; j<blobs[i].points.length; j++ ) {
-					vertex( blobs[i].points[j].x, blobs[i].points[j].y );
-				}
-				endShape(CLOSE);
-			}
-
+			
+			// process and render depth data
+			processDepthDataInCurrentOpenCVBuffer();
+	
+			// copy rgb data into opencv buffer
 			opencv.copy(context.rgbImage(), 0, 0, 640, 480, 0, 0, 640, 480);
-
-			opencv.threshold(rgbThreshold);
-
-			image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
-
-			blobs = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
-
-			// draw blob results
-			for( int i=0; i<blobs.length; i++ ) {
-				beginShape();
-				for( int j=0; j<blobs[i].points.length; j++ ) {
-					vertex( blobs[i].points[j].x + 640 + imageRegionPadding, blobs[i].points[j].y );
-				}
-				endShape(CLOSE);
-			}
+			
+			// process and render RGB data
+			processRGBDataInCurrentOpenCVBuffer();
 
 		} else {
 			// draw depthImageMap
@@ -183,9 +159,27 @@ public void draw()
 			println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
 		}
 
-		// draw it if we've got it
+		// use it if we've got it
 		if (sourceImage != null) {
-			image(sourceImage, 0, 0);	
+			
+			if (enableOpenCV) { // process source image with openCV
+				//copy(image, sx, sy, swidth, sheight, dx, dy, dwidth, dheight);
+				
+				// copy depth data into opencv buffer
+				opencv.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
+				
+				// process and render depth data
+				processDepthDataInCurrentOpenCVBuffer();
+				
+				// copy rgb data into opencv buffer
+				opencv.copy(sourceImage, 640 + imageRegionPadding, 0, 640, 480, 0, 0, 640, 480);
+				
+				// process and render rgb data
+				processRGBDataInCurrentOpenCVBuffer();
+				
+			} else { // just draw the current source image
+				image(sourceImage, 0, 0);		
+			}			
 		}
 	}
 
@@ -193,6 +187,37 @@ public void draw()
 
 	// draw adjustment variables
 	drawAdjustmentVariablesRegion();
+}
+
+public void processDepthDataInCurrentOpenCVBuffer() {
+	image(opencv.image(), 0, 0, 640, 480);
+
+	Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+	// draw blob results
+	for( int i=0; i<blobs.length; i++ ) {
+		beginShape();
+		for( int j=0; j<blobs[i].points.length; j++ ) {
+			vertex( blobs[i].points[j].x, blobs[i].points[j].y );
+		}
+		endShape(CLOSE);
+	}
+}
+
+public void processRGBDataInCurrentOpenCVBuffer() {
+	opencv.threshold(rgbThreshold);
+
+	image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
+
+	Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+
+	// draw blob results
+	for( int i=0; i<blobs.length; i++ ) {
+		beginShape();
+		for( int j=0; j<blobs[i].points.length; j++ ) {
+			vertex( blobs[i].points[j].x + 640 + imageRegionPadding, blobs[i].points[j].y );
+		}
+		endShape(CLOSE);
+	}	
 }
 
 public void drawAdjustmentVariablesRegion() {
