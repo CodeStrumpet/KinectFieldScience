@@ -62,6 +62,7 @@ float minBlobArea = 0.0f;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
+PImage depthTextureImage = null;
 int[] sourceDepthPixels = null;
 
 public void setup()
@@ -163,22 +164,63 @@ public void draw()
 			
 			
 			String[] rawDepthStrings = loadStrings(OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth.json");
-			if (rawDepthStrings != null) {
-				println("Number of strings " + rawDepthStrings.length);
+			if (rawDepthStrings != null && rawDepthStrings.length > 0) {
 				
-				/*
+				int minValue = 0;
+				int maxValue = 0; 
+				
+				// pull raw depth height map out of JSON data
 				try {
-					//JSONObject nytData = new JSONObject(join(loadStrings(request), ""));
-					//JSONArray results = nytData.getJSONArray("results");
-					//total = nytData.getInt("total");
-					//println ("There were " + total + " occurences of the term " + word + " between " + beginDate + " and " + endDate);
+					JSONObject depthData = new JSONObject(rawDepthStrings[0]); 
+					JSONArray depthMap = depthData.getJSONArray("depth_map");
+					
+					println("Number of elements in depthMap:  " + depthMap.length());
+					
+					
+					for (int i = 0; i < depthMap.length(); i++) {
+						int currValue = ((Integer)depthMap.get(i)).intValue();
+						
+						// set the minValue at the lowest non-zero value 
+						if (minValue == 0 && currValue > 0) {
+							minValue = currValue;
+						}
+						
+						if (i == 0) {
+							maxValue = currValue;
+						} else {
+							
+							if (currValue < minValue && currValue > 0) {
+								minValue = currValue;
+							}
+							if (currValue > maxValue) {
+								maxValue = currValue;
+							}
+						}
 					}
-				catch (JSONException e) {
+					
+					println("DepthMap minValue: " + minValue + "  maxValue: " + maxValue);
+					
+					int scaleFactor = 255 / (maxValue - minValue);
+					
+					// create image for texture
+					depthTextureImage = createImage(640, 480, RGB);
+					depthTextureImage.loadPixels();
+					
+					// set pixel color values for texture
+					for (int i = 0; i < 640 * 480; i++) {
+						
+						int currValue = ((Integer)depthMap.get(i)).intValue();
+						int colorValue = (currValue - minValue) * scaleFactor;
+						depthTextureImage.pixels[i] = color(colorValue, colorValue, colorValue);
+					}
+					depthTextureImage.updatePixels();
+					
+				} catch (JSONException e) {
 					println ("There was an error parsing the JSONObject.");
-				
 				}
-				*/
-								
+				
+				
+				
 			} else {
 				println("Failed to load raw depth strings");
 			}
@@ -192,7 +234,13 @@ public void draw()
 				//copy(image, sx, sy, swidth, sheight, dx, dy, dwidth, dheight);
 				
 				// copy depth data into opencv buffer
-				opencv.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
+				if (depthTextureImage != null) {
+					
+					opencv.copy(depthTextureImage, 0, 0, 640, 480, 0, 0, 640, 480);
+				} else {
+					opencv.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
+				}
+				
 				
 				// process and render depth data
 				processDepthDataInCurrentOpenCVBuffer();
@@ -205,6 +253,11 @@ public void draw()
 				
 			} else { // just draw the current source image
 				image(sourceImage, 0, 0);		
+				
+				// draw depthTextureImage on top if it is present
+				if(depthTextureImage != null) {
+					image(depthTextureImage, 0, 0);
+				}
 			}			
 		}
 	}
