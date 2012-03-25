@@ -47,18 +47,22 @@ final String SITE_ID_KEY = "siteID";
 final String USE_SENSOR_CAPTURE_STREAM = "useSensorCaptureStream  ('/')";
 final String UPDATE_SOURCE_IMAGE = "updateSourceImage  (']')";
 final String DEPTH_MAX_DIST_KEY = "depthMaxDist  ('<' , '>')";
+final String DEPTH_THRESHOLD_KEY = "depthThreshold (':' , '\"')";
 final String RGB_THRESHOLD_KEY = "rgbThreshold  ('-' , '+')";
 final String ENABLE_OPEN_CV = "enableOpenCV  ('~')";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
+final String FILL_IN_BLOBS_KEY = "fillInBlobs ('[')";
 
-String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY};
+String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY};
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
 boolean updateSourceImage = true;
 float depthMaxDist = 0.0f;
+float depthThreshold = 0.0f;
 float rgbThreshold = 0.0f;
 boolean enableOpenCV = false;
 float minBlobArea = 0.0f;
+boolean fillInBlobs = false;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
@@ -76,18 +80,6 @@ public void setup()
 
 	// create OpenCV instance
 	opencv = new OpenCV(this);
-
-	/*   AlternativeViewPoint????!
-  XnBool isSupported = context.IsCapabilitySupported("AlternativeViewPoint"); 
-if(TRUE == isSupported) 
-{ 
-  XnStatus res = depthGenerator.GetAlternativeViewPointCap().SetViewPoint(imageGenerator); 
-  if(XN_STATUS_OK != res) 
-  { 
-    printf("Getting and setting AlternativeViewPoint failed: %s\n", xnGetStatusString(res)); 
-  } 
-} 
-	 */
 
 	// mirror is by default
 	// mirror is by default enabled
@@ -126,7 +118,6 @@ if(TRUE == isSupported)
 
 public void draw()
 {
-
 	if (useSensorCaptureStream) {
 		// update the cam
 		context.update();
@@ -210,7 +201,24 @@ public void draw()
 					for (int i = 0; i < 640 * 480; i++) {
 						
 						int currValue = ((Integer)depthMap.get(i)).intValue();
-						int colorValue = (currValue - minValue) * scaleFactor;
+						
+						// make sure the currValue is within our distance threshold, and if not then set it to 0
+						if (currValue > depthMaxDist) {
+							currValue = 0;
+						}
+						
+						/* to create our color value we do the following:
+						 *
+						 * subtract min value (this makes the minimum value now 0)
+						 * multiply by scale factor (the scale factor is the number of times the max value goes into 255) (this now makes the max value 255)
+						 * we would prefer light values to be closer so we flip the scale by subtracting 255 and taking the absolute value (0 goes to 255, 255 goes to 0)  
+						 */					
+						int colorValue = 255;
+						if (currValue > 0) {
+							colorValue = ((currValue - minValue) * scaleFactor);
+							//colorValue = Math.abs(((currValue - minValue) * scaleFactor) - 255); // use this one if you want closer values to be lighter	
+						}						
+						
 						depthTextureImage.pixels[i] = color(colorValue, colorValue, colorValue);
 					}
 					depthTextureImage.updatePixels();
@@ -234,8 +242,7 @@ public void draw()
 				//copy(image, sx, sy, swidth, sheight, dx, dy, dwidth, dheight);
 				
 				// copy depth data into opencv buffer
-				if (depthTextureImage != null) {
-					
+				if (depthTextureImage != null) {					
 					opencv.copy(depthTextureImage, 0, 0, 640, 480, 0, 0, 640, 480);
 				} else {
 					opencv.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
@@ -262,19 +269,27 @@ public void draw()
 		}
 	}
 
-
-
 	// draw adjustment variables
 	drawAdjustmentVariablesRegion();
 }
 
 public void processDepthDataInCurrentOpenCVBuffer() {
+	
+	opencv.threshold(depthThreshold);
+	
 	image(opencv.image(), 0, 0, 640, 480);
 
 	Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
 	// draw blob results
 	for( int i=0; i<blobs.length; i++ ) {
 		beginShape();
+		
+		if (fillInBlobs) {
+			fill(255, 0, 0);
+		} else {
+			noFill();
+		}
+		
 		for( int j=0; j<blobs[i].points.length; j++ ) {
 			vertex( blobs[i].points[j].x, blobs[i].points[j].y );
 		}
@@ -292,6 +307,13 @@ public void processRGBDataInCurrentOpenCVBuffer() {
 	// draw blob results
 	for( int i=0; i<blobs.length; i++ ) {
 		beginShape();
+		
+		if (fillInBlobs) {
+			fill(255, 0, 0);
+		} else {
+			noFill();
+		}
+		
 		for( int j=0; j<blobs[i].points.length; j++ ) {
 			vertex( blobs[i].points[j].x + 640 + imageRegionPadding, blobs[i].points[j].y );
 		}
@@ -320,7 +342,6 @@ public void drawAdjustmentVariablesRegion() {
 		text(adjustmentVariableValueForVariableName(adjustmentVariableNames[i]), leftPadding + variableNameColumnWidth, startPosition + yPosition);
 	}    
 
-	//text(currSiteID, 20, windowHeight - (textRegionHeight / 2));	
 }
 
 public void keyPressed() { 
@@ -342,6 +363,14 @@ public void keyPressed() {
 			depthMaxDist += depthMaxDistIncrementValue;
 		} 
 		println("rightSign");
+	} else if (key == ';' || key == ':') {
+		if (depthThreshold - depthThresholdIncrementValue >= depthThresholdMinValue) {
+			depthThreshold -= depthThresholdIncrementValue;
+		}
+	} else if (key == '\'' || key == '"') {
+		if (depthThreshold + depthThresholdIncrementValue <= depthThresholdMaxValue) {
+			depthThreshold += depthThresholdIncrementValue;
+		}
 	} else if (key == '-') { // rgbThreshold
 		if (rgbThreshold - rgbThresholdIncrementValue >= rgbThresholdMinValue) {
 			rgbThreshold -= rgbThresholdIncrementValue;	
@@ -363,26 +392,28 @@ public void keyPressed() {
 	} else if (key == ']' || key == '}') {
 		updateSourceImage = true;
 		println("Update Source Image");
+	} else if (key == '[' || key == '{') {
+		fillInBlobs = !fillInBlobs;
 	} else {
 		currSiteID = currSiteID + key;
 	}
 }
 
-/*
-float depthMaxDist = 0.0;
-float rgbThreshold = 0.0;
-float minBlobArea = 0.0;
- */
 
 int depthMaxDistMinValue = 300;
 int depthMaxDistMaxValue = 3000;
-int depthMaxDistIncrementValue = 10;
-int depthMaxDistDefaultValue = 2000; // default
+int depthMaxDistIncrementValue = 1;
+int depthMaxDistDefaultValue = 650; // default
+
+int depthThresholdMinValue = 0;
+int depthThresholdMaxValue = 255;
+int depthThresholdIncrementValue = 1;
+int depthThresholdDefaultValue = 125;
 
 int rgbThresholdMinValue = 0;
 int rgbThresholdMaxValue = 255;
-int rgbThresholdIncrementValue = 5;
-int rgbThresholdDefaultValue = 80; // default
+int rgbThresholdIncrementValue = 1;
+int rgbThresholdDefaultValue = 75; // default
 
 int minBlobAreaMinValue = 4;
 int minBlobAreaMaxValue = 640 * 480;
@@ -392,16 +423,20 @@ int minBlobAreaDefaultValue = 100;
 boolean enableOpenCVDefaultValue = false;
 boolean useSensorCaptureStreamDefaultValue = false;
 boolean updateSourceImageDefaultValue = false;
+boolean fillInBlobsDefaultValue = true;
 
 public void setDefaultAdjustmentVariableValues() {
 	depthMaxDist = depthMaxDistDefaultValue;
+	depthThreshold = depthThresholdDefaultValue;
 	rgbThreshold = rgbThresholdDefaultValue;
 	minBlobArea = minBlobAreaDefaultValue;
 
 	enableOpenCV = enableOpenCVDefaultValue;
 	useSensorCaptureStream = useSensorCaptureStreamDefaultValue;
 	updateSourceImage = updateSourceImageDefaultValue;
+	fillInBlobs = fillInBlobsDefaultValue;
 }
+
 
 /**
 Prints the Depth data as JSON in the following format:
@@ -569,6 +604,10 @@ public String adjustmentVariableValueForVariableName(String adjustmentVariableNa
 		return Float.toString(minBlobArea);
 	} else if (adjustmentVariableName.equalsIgnoreCase(ENABLE_OPEN_CV)) {
 		return enableOpenCV ? "True" : "False";
+	} else if (adjustmentVariableName.equalsIgnoreCase(DEPTH_THRESHOLD_KEY)) {
+		return Float.toString(depthThreshold);
+	} else if (adjustmentVariableName.equalsIgnoreCase(FILL_IN_BLOBS_KEY)) {
+		return fillInBlobs ? "True" : "False";
 	} else {
 		return "Unknown NO Match";
 	}
