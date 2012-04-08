@@ -58,7 +58,9 @@ PImage depthTextureImage = null;
 int[] sourceDepthPixels = null;
 PVector[] depthPoints = null;
 
-
+// these are reset from the context itself below if it's available
+int sensorImageWidth = 640; 
+int sensorImageHeight = 480;
 
 void setup()
 {
@@ -66,41 +68,22 @@ void setup()
     // set default values
     setDefaultAdjustmentVariableValues();
 
-    // create kinect context
+    // create kinect context and setup options
     context = new SimpleOpenNI(this);
+    context.setMirror(true); // mirror is by default enabled
+    context.alternativeViewPointDepthToImage(); // enable lining up depth and rgb data
 
-    // create OpenCV instance
-    opencv = new OpenCV(this);
+    // set sensorImageWidth and Height from sensor
+    sensorImageWidth = context.depthWidth();
+    sensorImageHeight = context.depthHeight();
 
-    // mirror is by default
-    // mirror is by default enabled
-    context.setMirror(true);
-
-    // enable lining up depth and rgb data
-    context.alternativeViewPointDepthToImage();
-
-    // enable depthMap generation 
-    if(context.enableDepth() == false) {
-	println("Can't open the depthMap, maybe the camera is not connected!");
-	canUseConnectedSensor = false;
+    if (context.depthWidth() != context.rgbWidth() || context.depthHeight() != context.rgbHeight()) {
+	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
     }
-
-    if(context.enableRGB() == false) {
-	println("Can't open the rgbMap, maybe the camera is not connected or there is no rgbSensor!");
-	canUseConnectedSensor = false;
-    }
-
-    // create buffer for openCV
-    opencv.allocate(640, 480);
-
-    // setup model and vertexList for mesh
-    model = new UGeometry();
-    vertexList = new UVertexList();
-
-
+    
     // setup window
-    windowWidth = context.depthWidth() + context.rgbWidth() + imageRegionPadding;
-    windowHeight = context.rgbHeight() + textRegionHeight; 
+    windowWidth = sensorImageWidth * 2 + imageRegionPadding;
+    windowHeight = sensorImageHeight + textRegionHeight; 
 	
     if (windowWidth == imageRegionPadding) {
 	windowWidth += 640 * 2;
@@ -109,7 +92,28 @@ void setup()
 	windowHeight += 480;
     }
 
+    // set the actual window size, enabling OPENGL
     size(windowWidth, windowHeight, OPENGL);
+
+
+    // enable depthMap generation (needs to happen after window has been sized)
+    if(context.enableDepth() == false) {
+	println("Can't open the depthMap, maybe the camera is not connected!");
+	canUseConnectedSensor = false;
+    }
+    // enable rgb generation (needs to happen after window has been sized)
+    if(context.enableRGB() == false) {
+	println("Can't open the rgbMap, maybe the camera is not connected or there is no rgbSensor!");
+	canUseConnectedSensor = false;
+    }
+
+    // create OpenCV instance and allocate buffer
+    opencv = new OpenCV(this);
+    opencv.allocate(sensorImageWidth, sensorImageHeight);
+
+    // setup model and vertexList for mesh
+    model = new UGeometry();
+    vertexList = new UVertexList();
 }
 
 void draw()
@@ -139,6 +143,7 @@ void draw()
 	    if (enableMeshConstruction) {
 		depthPoints = context.depthMapRealWorld();
 		processRealWorldPoints();
+		image(context.depthImage(),0,0);			
 	    } else {
 		// draw depthImageMap
 		image(context.depthImage(),0,0);			
@@ -351,8 +356,8 @@ void processRealWorldPoints() {
 	    }
 	    else { // scanning is disabled, just draw the 3D points
 		stroke(255);
-		PVector currentPoint = depthPoints[i];
-		point(currentPoint.x, currentPoint.y, currentPoint.z);
+		//PVector currentPoint = depthPoints[i];
+		//point(currentPoint.x, currentPoint.y, currentPoint.z);
 	    }
 	}
 
