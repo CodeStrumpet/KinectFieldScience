@@ -3,11 +3,18 @@ import com.sun.image.codec.jpeg.*;
 import hypermedia.video.*;
 import java.awt.image.BufferedImage;
 import org.json.*;
-
+import unlekker.util.*;
+import unlekker.modelbuilder.*;
+import processing.opengl.*;
 
 
 SimpleOpenNI  context; 
 OpenCV opencv;
+
+int maxZ = 2000;
+int spacing = 3;
+UGeometry model;
+UVertexList vertexList;
 
 PFont f;
 int windowWidth = 0; 
@@ -17,6 +24,7 @@ int textRegionHeight = 300;
 String debugLog = "";
 
 final String OUTPUT_DIRECTORY = "data\\output\\PostZZYZX";
+final String INPUT_DIRECTORY = "data\\output";
 
 final String SITE_ID_KEY = "siteID";
 final String USE_SENSOR_CAPTURE_STREAM = "useSensorCaptureStream  ('/')";
@@ -29,6 +37,7 @@ final String MIN_BLOB_AREA_KEY = "minBlobArea";
 final String FILL_IN_BLOBS_KEY = "fillInBlobs ('[')";
 
 String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY};
+
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
 boolean updateSourceImage = true;
@@ -124,7 +133,7 @@ void draw()
 	} else {
 		// load image if necessary
 		if (updateSourceImage) {
-			sourceImage = loadImage(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+			sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
 			updateSourceImage = false;
 			println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
 			
