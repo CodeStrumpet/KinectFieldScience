@@ -35,8 +35,9 @@ final String RGB_THRESHOLD_KEY = "rgbThreshold  ('-' , '+')";
 final String ENABLE_OPEN_CV = "enableOpenCV  ('~')";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 final String FILL_IN_BLOBS_KEY = "fillInBlobs ('[')";
+final String ENABLE_MESH_CONSTRUCTION = "enableMeshConstruction ('%')";
 
-String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY};
+String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION};
 
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
@@ -47,6 +48,7 @@ float rgbThreshold = 0.0;
 boolean enableOpenCV = false;
 float minBlobArea = 0.0;
 boolean fillInBlobs = false;
+boolean enableMeshConstruction = false;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
@@ -381,6 +383,8 @@ void keyPressed() {
 	println("Update Source Image");
     } else if (key == '[' || key == '{') {
 	fillInBlobs = !fillInBlobs;
+    } else if (key == '%') {
+	enableMeshConstruction = !enableMeshConstruction;
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -411,6 +415,7 @@ boolean enableOpenCVDefaultValue = false;
 boolean useSensorCaptureStreamDefaultValue = false;
 boolean updateSourceImageDefaultValue = false;
 boolean fillInBlobsDefaultValue = true;
+boolean enableMeshConstructionDefaultValue = false;
 
 void setDefaultAdjustmentVariableValues() {
     depthMaxDist = depthMaxDistDefaultValue;
@@ -422,6 +427,7 @@ void setDefaultAdjustmentVariableValues() {
     useSensorCaptureStream = useSensorCaptureStreamDefaultValue;
     updateSourceImage = updateSourceImageDefaultValue;
     fillInBlobs = fillInBlobsDefaultValue;
+    enableMeshConstruction = enableMeshConstructionDefaultValue;
 }
 
 
@@ -595,6 +601,8 @@ String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 	return Float.toString(depthThreshold);
     } else if (adjustmentVariableName.equalsIgnoreCase(FILL_IN_BLOBS_KEY)) {
 	return fillInBlobs ? "True" : "False";
+    } else if (adjustmentVariableName.equalsIgnoreCase(ENABLE_MESH_CONSTRUCTION)) {
+	return enableMeshConstruction ? "True" : "False";
     } else {
 	return "Unknown NO Match";
     }
