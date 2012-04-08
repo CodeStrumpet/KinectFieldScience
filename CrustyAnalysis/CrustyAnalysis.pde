@@ -11,7 +11,6 @@ import processing.opengl.*;
 SimpleOpenNI  context; 
 OpenCV opencv;
 
-int maxZ = 2000;
 int spacing = 3;
 UGeometry model;
 UVertexList vertexList;
@@ -65,6 +64,21 @@ int sensorImageHeight = 480;
 void setup()
 {
 
+        // setup window
+    windowWidth = sensorImageWidth * 2 + imageRegionPadding;
+    windowHeight = sensorImageHeight + textRegionHeight; 
+	
+    if (windowWidth == imageRegionPadding) {
+	windowWidth += 640 * 2;
+    }
+    if (windowHeight == textRegionHeight) {
+	windowHeight += 480;
+    }
+
+    // set the actual window size, enabling OPENGL
+    size(windowWidth, windowHeight, OPENGL);
+
+
     // set default values
     setDefaultAdjustmentVariableValues();
 
@@ -81,19 +95,7 @@ void setup()
 	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
     }
     
-    // setup window
-    windowWidth = sensorImageWidth * 2 + imageRegionPadding;
-    windowHeight = sensorImageHeight + textRegionHeight; 
-	
-    if (windowWidth == imageRegionPadding) {
-	windowWidth += 640 * 2;
-    }
-    if (windowHeight == textRegionHeight) {
-	windowHeight += 480;
-    }
 
-    // set the actual window size, enabling OPENGL
-    size(windowWidth, windowHeight, OPENGL);
 
 
     // enable depthMap generation (needs to happen after window has been sized)
@@ -118,11 +120,11 @@ void setup()
 
 void draw()
 {
+    background(200,0,0);
+
     if (useSensorCaptureStream) {
 	// update the cam
 	context.update();
-
-	background(200,0,0);
 
 	if (enableOpenCV) {
 	    // copy depth data into opencv buffer
@@ -327,55 +329,103 @@ void processRGBDataInCurrentOpenCVBuffer() {
 void processRealWorldPoints() {
 
     pushMatrix();
-       translate(-sensorImageWidth/2, -sensorImageHeight/2, -1000);
-        rotateX(radians(180));
+    translate(-sensorImageWidth, -sensorImageHeight/2, -1000);
+    rotateX(radians(180));
 
     if (creatingScannedMesh) {
 	model.beginShape(TRIANGLES);
-	fill(255);
-	text("PERFORMING SCAN...", 5, 10);
     }
 
+    int cleanedUpPoints = 0;
+
+    // cleanup pass
+    for (int y = 0; y < 480; y+=spacing) {
+	for (int x = 0; x < 640; x+= spacing) {
+	    int i = y * 640 + x;
+	    PVector p = depthPoints[i];
+
+	   
+
+	    // if the point is on the edge or if it has no depth
+	    if (p.z < 10 || p.z > depthMaxDist || y == 0 || y == 480 - spacing || x == 0 || x == 640 - spacing) {
+		// replace it with a point at the depth of the backplane (i.e. depthMaxDist)
+		PVector realWorld = new PVector();
+		PVector projective = new PVector(x, y, depthMaxDist);
+
+		// to get the point in the right place, we need to translate
+		// from x/y to realworld coordinates to match our other points:
+		context.convertProjectiveToRealWorld(projective, realWorld);  // do we have to recreate this every time??
+
+		depthPoints[i] = realWorld;
+
+		cleanedUpPoints++;
+	    }
+	}
+    }
+
+   
+
+    int faceCount = 0;
     for (int y = 0; y < 480 -spacing; y+=spacing) {
 	for (int x = 0; x < 640 -spacing; x+= spacing) {
 	    int i = y * 640 + x;
-
-	    int nw = i;
-	    int ne = nw + spacing;
-	    int sw = i + 640 * spacing;
-	    int se = sw + spacing;
 	    
-
 	    if (creatingScannedMesh) { // only build the mesh if scanning is enabled
-		model.addFace(new UVec3(depthPoints[nw].x, depthPoints[nw].y, depthPoints[nw].z),
-			      new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
-			      new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
 
-		model.addFace(new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
-			      new UVec3(depthPoints[se].x, depthPoints[se].y, depthPoints[se].z),
-			      new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
-        
-        
+		int nw = i;
+		int ne = nw + spacing;
+		int sw = i + 640 * spacing;
+		int se = sw + spacing;
 
-	    }
-	    else { // scanning is disabled, just draw the 3D points
+		if (!allZero(depthPoints[nw]) && !allZero(depthPoints[ne]) && !allZero(depthPoints[sw]) && !allZero(depthPoints[se])) {
+		    model.addFace(new UVec3(depthPoints[nw].x, depthPoints[nw].y, depthPoints[nw].z),
+				  new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
+				  new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
 
+		    model.addFace(new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
+				  new UVec3(depthPoints[se].x, depthPoints[se].y, depthPoints[se].z),
+				  new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
 
+		    faceCount += 2;
+		}	                
+	   } else { // scanning is disabled, just draw the 3D points
 
 		stroke(255);
 		PVector currentPoint = depthPoints[i];
-		point(currentPoint.x, currentPoint.y, currentPoint.z);
+		if (currentPoint.z < depthMaxDist) {
+		    point(currentPoint.x, currentPoint.y, currentPoint.z);
+		}
 	    }
 	}
 
-	if (creatingScannedMesh) {
-	    model.endShape();
-	    model.writeSTL(this, "scan_"+random(1000)+".stl");
-	    creatingScannedMesh = false;
-	}
+
     }
 
+	if (creatingScannedMesh) {
+	    model.calcBounds();
+	    model.translate(0, 0, -depthMaxDist);
+
+	    float modelWidth = (model.bb.max.x - model.bb.min.x);
+	    float modelHeight = (model.bb.max.y - model.bb.min.y);
+
+	    UGeometry backing = Primitive.box(modelWidth/2, modelHeight/2, 10);
+	    model.add(backing);
+    
+	    model.scale(0.01);
+	    model.rotateY(radians(180));
+	    model.toOrigin();
+    
+	    model.endShape();
+	    model.writeSTL(this, OUTPUT_DIRECTORY + "//scan_"+random(1000)+".stl");
+	    println("FaceCount:  " + faceCount + "  FaceNum:  " + model.faceNum + "   Cleaned up Points:  " + cleanedUpPoints);
+	    creatingScannedMesh = false;
+	}
+
     popMatrix();
+}
+
+boolean allZero(PVector p) {
+  return (p.x == 0 && p.y == 0 && p.z == 0);
 }
 
 void drawAdjustmentVariablesRegion() {
@@ -455,6 +505,7 @@ void keyPressed() {
 	enableMeshConstruction = !enableMeshConstruction;
     } else if (key == '&') {
 	creatingScannedMesh = true;
+	model.reset();
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -463,7 +514,7 @@ void keyPressed() {
 
 int depthMaxDistMinValue = 300;
 int depthMaxDistMaxValue = 3000;
-int depthMaxDistIncrementValue = 1;
+int depthMaxDistIncrementValue = 5;
 int depthMaxDistDefaultValue = 650; // default
 
 int depthThresholdMinValue = 0;
