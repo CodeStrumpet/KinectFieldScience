@@ -143,13 +143,12 @@ void draw()
 	    if (enableMeshConstruction) {
 		depthPoints = context.depthMapRealWorld();
 		processRealWorldPoints();
-		image(context.depthImage(),0,0);			
 	    } else {
 		// draw depthImageMap
 		image(context.depthImage(),0,0);			
 	    }    
 
-	    // draw irImageMap
+	    // draw rgbImage
 	    image(context.rgbImage(),context.depthWidth() + 10,0);	
 	}  
 
@@ -326,6 +325,11 @@ void processRGBDataInCurrentOpenCVBuffer() {
 }
 
 void processRealWorldPoints() {
+
+    pushMatrix();
+       translate(-sensorImageWidth/2, -sensorImageHeight/2, -1000);
+        rotateX(radians(180));
+
     if (creatingScannedMesh) {
 	model.beginShape(TRIANGLES);
 	fill(255);
@@ -355,9 +359,12 @@ void processRealWorldPoints() {
 
 	    }
 	    else { // scanning is disabled, just draw the 3D points
+
+
+
 		stroke(255);
-		//PVector currentPoint = depthPoints[i];
-		//point(currentPoint.x, currentPoint.y, currentPoint.z);
+		PVector currentPoint = depthPoints[i];
+		point(currentPoint.x, currentPoint.y, currentPoint.z);
 	    }
 	}
 
@@ -367,6 +374,8 @@ void processRealWorldPoints() {
 	    creatingScannedMesh = false;
 	}
     }
+
+    popMatrix();
 }
 
 void drawAdjustmentVariablesRegion() {
