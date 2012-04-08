@@ -36,8 +36,9 @@ final String ENABLE_OPEN_CV = "enableOpenCV  ('~')";
 final String MIN_BLOB_AREA_KEY = "minBlobArea";
 final String FILL_IN_BLOBS_KEY = "fillInBlobs ('[')";
 final String ENABLE_MESH_CONSTRUCTION = "enableMeshConstruction ('%')";
+final String CREATING_SCANNED_MESH = "save mesh ('&')";
 
-String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION};
+String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION, CREATING_SCANNED_MESH};
 
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
@@ -49,11 +50,15 @@ boolean enableOpenCV = false;
 float minBlobArea = 0.0;
 boolean fillInBlobs = false;
 boolean enableMeshConstruction = false;
+boolean creatingScannedMesh = false;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
 PImage depthTextureImage = null;
 int[] sourceDepthPixels = null;
+PVector[] depthPoints = null;
+
+
 
 void setup()
 {
@@ -129,10 +134,15 @@ void draw()
 	    processRGBDataInCurrentOpenCVBuffer();
 
 	} else {
-	    // add modelbuilder flag
-		    
-	    // draw depthImageMap
-	    image(context.depthImage(),0,0);			
+
+	    // draw depth: use standard depth image map or draw in 3D based on current value of enableMeshConstruction
+	    if (enableMeshConstruction) {
+		depthPoints = context.depthMapRealWorld();
+		processRealWorldPoints();
+	    } else {
+		// draw depthImageMap
+		image(context.depthImage(),0,0);			
+	    }    
 
 	    // draw irImageMap
 	    image(context.rgbImage(),context.depthWidth() + 10,0);	
@@ -310,6 +320,50 @@ void processRGBDataInCurrentOpenCVBuffer() {
     }	
 }
 
+void processRealWorldPoints() {
+    if (creatingScannedMesh) {
+	model.beginShape(TRIANGLES);
+	fill(255);
+	text("PERFORMING SCAN...", 5, 10);
+    }
+
+    for (int y = 0; y < 480 -spacing; y+=spacing) {
+	for (int x = 0; x < 640 -spacing; x+= spacing) {
+	    int i = y * 640 + x;
+
+	    int nw = i;
+	    int ne = nw + spacing;
+	    int sw = i + 640 * spacing;
+	    int se = sw + spacing;
+	    
+
+	    if (creatingScannedMesh) { // only build the mesh if scanning is enabled
+		model.addFace(new UVec3(depthPoints[nw].x, depthPoints[nw].y, depthPoints[nw].z),
+			      new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
+			      new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
+
+		model.addFace(new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
+			      new UVec3(depthPoints[se].x, depthPoints[se].y, depthPoints[se].z),
+			      new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
+        
+        
+
+	    }
+	    else { // scanning is disabled, just draw the 3D points
+		stroke(255);
+		PVector currentPoint = depthPoints[i];
+		point(currentPoint.x, currentPoint.y, currentPoint.z);
+	    }
+	}
+
+	if (creatingScannedMesh) {
+	    model.endShape();
+	    model.writeSTL(this, "scan_"+random(1000)+".stl");
+	    creatingScannedMesh = false;
+	}
+    }
+}
+
 void drawAdjustmentVariablesRegion() {
 
     fill(30, 30, 30);
@@ -385,6 +439,8 @@ void keyPressed() {
 	fillInBlobs = !fillInBlobs;
     } else if (key == '%') {
 	enableMeshConstruction = !enableMeshConstruction;
+    } else if (key == '&') {
+	creatingScannedMesh = true;
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -603,6 +659,8 @@ String adjustmentVariableValueForVariableName(String adjustmentVariableName) {
 	return fillInBlobs ? "True" : "False";
     } else if (adjustmentVariableName.equalsIgnoreCase(ENABLE_MESH_CONSTRUCTION)) {
 	return enableMeshConstruction ? "True" : "False";
+    } else if (adjustmentVariableName.equalsIgnoreCase(CREATING_SCANNED_MESH)) {
+	return "N/A";
     } else {
 	return "Unknown NO Match";
     }
