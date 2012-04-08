@@ -16,7 +16,7 @@ int imageRegionPadding = 10;
 int textRegionHeight = 300;
 String debugLog = "";
 
-final String OUTPUT_DIRECTORY = "data\\output";
+final String OUTPUT_DIRECTORY = "data\\output\\PostZZYZX";
 
 final String SITE_ID_KEY = "siteID";
 final String USE_SENSOR_CAPTURE_STREAM = "useSensorCaptureStream  ('/')";
