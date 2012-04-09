@@ -85,17 +85,7 @@ void setup()
     // create kinect context and setup options
     context = new SimpleOpenNI(this);
     context.setMirror(true); // mirror is by default enabled
-    context.alternativeViewPointDepthToImage(); // enable lining up depth and rgb data
-
-    // set sensorImageWidth and Height from sensor
-    sensorImageWidth = context.depthWidth();
-    sensorImageHeight = context.depthHeight();
-
-    if (context.depthWidth() != context.rgbWidth() || context.depthHeight() != context.rgbHeight()) {
-	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
-    }
-    
-
+    context.alternativeViewPointDepthToImage(); // enable lining up depth and rgb data    
 
 
     // enable depthMap generation (needs to happen after window has been sized)
@@ -108,6 +98,18 @@ void setup()
 	println("Can't open the rgbMap, maybe the camera is not connected or there is no rgbSensor!");
 	canUseConnectedSensor = false;
     }
+
+
+    // set sensorImageWidth and Height from sensor
+    sensorImageWidth = context.depthWidth();
+    sensorImageHeight = context.depthHeight();
+
+    println("sensorImageWidth:  " + sensorImageWidth + "  sensorImageHeight:  " + sensorImageHeight);
+
+    if (context.depthWidth() != context.rgbWidth() || context.depthHeight() != context.rgbHeight()) {
+	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
+    }
+
 
     // create OpenCV instance and allocate buffer
     opencv = new OpenCV(this);
@@ -175,11 +177,15 @@ void draw()
 		    JSONArray depthMap = depthData.getJSONArray("depth_map");
 					
 		    println("Number of elements in depthMap:  " + depthMap.length());
-					
+		    
+		    sourceDepthPixels = new int[depthMap.length()];
 					
 		    for (int i = 0; i < depthMap.length(); i++) {
 			int currValue = ((Integer)depthMap.get(i)).intValue();
-						
+
+			// store value in global array for additional operations later
+			sourceDepthPixels[i] = currValue;
+			
 			// set the minValue at the lowest non-zero value 
 			if (minValue == 0 && currValue > 0) {
 			    minValue = currValue;
@@ -230,7 +236,55 @@ void draw()
 						
 			depthTextureImage.pixels[i] = color(colorValue, colorValue, colorValue);
 		    }
+
+		    // update actual pixels in depthTextureImage
 		    depthTextureImage.updatePixels();
+
+
+		    // create 'depthPoints' array of real world points from captured depth data
+		    depthPoints = new PVector[sensorImageWidth * sensorImageHeight];
+
+		    minValue = 0;
+		    maxValue = 0;
+
+		    for (int y = 0; y < sensorImageHeight; y+=spacing) {
+			for (int x = 0; x < sensorImageWidth; x+= spacing) {
+			    int i = y * sensorImageWidth + x;
+
+			    int currValue = ((Integer)depthMap.get(i)).intValue();
+			    
+			    PVector realWorld = new PVector();
+			    PVector projective = new PVector(x, y, currValue);
+
+			    // translate from x/y to realworld coordinates
+			    context.convertProjectiveToRealWorld(projective, realWorld);  
+
+			    depthPoints[i] = realWorld;
+
+
+			    // set the minValue at the lowest non-zero value 
+			    if (minValue == 0 && (int)realWorld.z > 0) {
+				minValue = (int)realWorld.z;
+			    }
+						
+			    if (i == 0) {
+				maxValue = (int)realWorld.z;
+			    } else {
+							
+				if ((int)realWorld.z < minValue && (int)realWorld.z > 0) {
+				    minValue = (int)realWorld.z;
+				}
+				if ((int)realWorld.z > maxValue) {
+				    maxValue = (int)realWorld.z;
+				}
+			    }
+			}
+		    }
+
+		    println("Real World minValue: " + minValue + "  maxValue: " + maxValue);
+
+		    println("depthPoints size:  " + depthPoints.length);
+
 					
 		} catch (JSONException e) {
 		    println ("There was an error parsing the JSONObject.");
@@ -238,8 +292,8 @@ void draw()
 	    } else {
 		println("Failed to load raw depth strings");
 	    }
-									
 	}
+
 
 	// use it if we've got it
 	if (sourceImage != null) {
@@ -263,13 +317,22 @@ void draw()
 		// process and render rgb data
 		processRGBDataInCurrentOpenCVBuffer();
 				
-	    } else { // just draw the current source image
-		image(sourceImage, 0, 0);		
-				
-		// draw depthTextureImage on top if it is present
-		if(depthTextureImage != null) {
-		    image(depthTextureImage, 0, 0);
-		}
+	    } else { 
+
+		// draw the current source image (depth + rgb capture)
+		image(sourceImage, 0, 0);	       
+
+		if (enableMeshConstruction) {
+		    
+		    fill(200,0,0);
+		    rect(0, 0, sensorImageWidth, sensorImageHeight);
+		    processRealWorldPoints();
+		} else {
+		    // draw depthTextureImage on top if it is present
+		    if(depthTextureImage != null) {
+			image(depthTextureImage, 0, 0);
+		    }		    
+		}    				
 	    }			
 	}
     }
@@ -327,9 +390,9 @@ void processRGBDataInCurrentOpenCVBuffer() {
 }
 
 void processRealWorldPoints() {
-
+    fill(255);
     pushMatrix();
-    translate(-sensorImageWidth, -sensorImageHeight/2, -1000);
+    //translate(-sensorImageWidth, -sensorImageHeight/2, 2000);
     rotateX(radians(180));
 
     if (creatingScannedMesh) {
@@ -506,6 +569,10 @@ void keyPressed() {
     } else if (key == '&') {
 	creatingScannedMesh = true;
 	model.reset();
+    } else if (key == '*') {
+	if (currSiteID.length() > 0 && sourceImage != null && sourceDepthPixels != null && sourceDepthPixels.length > 0) {
+	    printDepthArrayToMatrixForCurrenSiteID(sourceDepthPixels);
+	}
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -514,7 +581,7 @@ void keyPressed() {
 
 int depthMaxDistMinValue = 300;
 int depthMaxDistMaxValue = 3000;
-int depthMaxDistIncrementValue = 5;
+int depthMaxDistIncrementValue = 50;
 int depthMaxDistDefaultValue = 650; // default
 
 int depthThresholdMinValue = 0;
@@ -647,6 +714,24 @@ void saveDataForSiteCSV(String siteID) {
     //context.rgbImage().save(rgbPath);
 }
 
+void printDepthArrayToMatrixForCurrenSiteID(int[] array) {
+    String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
+    println("Creating file:  " + fileName);
+    PrintWriter out = createWriter(fileName);
+
+    for (int y = 0; y < sensorImageHeight; y++) {
+	for (int x = 0; x < sensorImageWidth; x++) {
+	    if (x == 0) {
+		out.print(array[y * sensorImageWidth]);
+	    } else if (x == sensorImageWidth - 1) {
+		out.print(", " + array[sensorImageWidth * y + x]);
+		out.println("");
+	    } else {
+		out.print(", " + array[sensorImageWidth * y + x]);
+	    }   
+	}
+    }
+}
 
 void printJSONArrayToOutput(int [] array, PrintWriter out) {
     out.print("[");
