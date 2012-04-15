@@ -50,10 +50,12 @@ float minBlobArea = 0.0;
 boolean fillInBlobs = false;
 boolean enableMeshConstruction = false;
 boolean creatingScannedMesh = false;
+boolean saveRGBFrame = false;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
 PImage depthTextureImage = null;
+PImage rgbTextureImage = null;
 int[] sourceDepthPixels = null;
 PVector[] depthPoints = null;
 
@@ -101,8 +103,12 @@ void setup()
 
 
     // set sensorImageWidth and Height from sensor
-    sensorImageWidth = context.depthWidth();
-    sensorImageHeight = context.depthHeight();
+    if (context.depthWidth() > 0) {
+	sensorImageWidth = context.depthWidth();
+    }
+    if (context.depthHeight() > 0) {
+	sensorImageHeight = context.depthHeight();
+    }
 
     println("sensorImageWidth:  " + sensorImageWidth + "  sensorImageHeight:  " + sensorImageHeight);
 
@@ -366,6 +372,7 @@ void processDepthDataInCurrentOpenCVBuffer() {
 }
 
 void processRGBDataInCurrentOpenCVBuffer() {
+
     opencv.threshold(rgbThreshold);
 
     image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
@@ -573,6 +580,9 @@ void keyPressed() {
 	if (currSiteID.length() > 0 && sourceImage != null && sourceDepthPixels != null && sourceDepthPixels.length > 0) {
 	    printDepthArrayToMatrixForCurrenSiteID(sourceDepthPixels);
 	}
+    } else if (key == 'b') {
+	println("saving RGBImage cropped out of combinedImage for site with ID: " + currSiteID);
+	saveRGBImageFromCombinedImage(currSiteID);
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -651,6 +661,9 @@ void saveDataForSiteJSON(String siteID) {
 	
     SaveJpg(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
 
+    
+
+
     /* 
        String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
        println("Absolute Path:  " + absolutePath);
@@ -670,49 +683,36 @@ void saveDataForSiteJSON(String siteID) {
     //context.rgbImage().save(rgbPath);
 }
 
+void saveRGBImageFromCombinedImage(String siteID) {
 
-// Placeholder
-void saveDataForSiteCSV(String siteID) {
+    println("saveRGBImageFromCombinedImage");
+     
+    String combinedImagePath = INPUT_DIRECTORY + "//" + siteID + "\\combined_images_" + siteID + ".jpg";
+    PImage combinedImage = loadImage(combinedImagePath);
 
-    String fileName = currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
-    println("Creating file:  " + fileName);
-    PrintWriter depthOut = createWriter(fileName);
+    /*
 
-    depthOut.print("{");
-    printJSONStringStringKeyValuePair("location_id", siteID, depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("depth_width", context.depthWidth(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("depth_height", context.depthHeight(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("rgb_width", context.rgbWidth(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("rgb_height", context.rgbHeight(), depthOut);
-    depthOut.print(", ");
-    depthOut.print("\"depth_map\"");
-    depthOut.print(" : ");
-    printJSONArrayToOutput(context.depthMap(), depthOut);
-    depthOut.print("}");
-    depthOut.flush();
-    depthOut.close();
 
-    SaveJpg(currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+    // copy rgb data into opencv buffer
+    opencv.copy(combinedImage, 640 + imageRegionPadding, 0, 640, 480, 0, 0, 640, 480);
+    
+    PImage rgbTexture = new PImage(640, 480, ARGB);
+    rgbTexture.loadPixels();
 
-    /* 
-       String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
-       println("Absolute Path:  " + absolutePath);
+    int colorValue = 27;
 
-       String depthPath = absolutePath + siteID + \\depth_image_" + currSiteID + ".jpg";
-       String rgbPath = absolutePath + "rgb_image_" + currSiteID + ".jpg";
+    for (int i = 0; i < 640 * 480; i++) {
 
-       debugLog = depthPath;
-
+	rgbTexture.pixels[i] = color(colorValue, colorValue, colorValue);//opencv.pixels()[i];
+    }
     */
+	
+    String outputFileName = INPUT_DIRECTORY + "//" + siteID + "\\rgb.jpg";
 
-    //context.depthImage().save(absolutePath);
-    //String rgbPath = savePath("rgb_image_" + currSiteID + ".jpg");
-    //context.rgbImage().save(rgbPath);
+    println("about to savePImageJpg");
+    saveSubimageJPGFromImage(combinedImage, outputFileName, 640 + imageRegionPadding, 0, 640, 480);
 }
+
 
 void printDepthArrayToMatrixForCurrenSiteID(int[] array) {
     String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
@@ -784,6 +784,40 @@ void SaveJpg(String fname){
     }
     byte [] a = out.toByteArray();
     saveBytes(fname,a);
+}
+
+
+void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, int h){
+
+    println("saveSubimageJPGFromImage");
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    BufferedImage img = new BufferedImage(image.width, image.height, 2); // 2 for TYPE_INT_ARGB from BufferedImage constants
+    img = (BufferedImage)createImage(image.width, image.height); // redundant?
+    image.loadPixels();    
+
+    for(int i = 0; i < image.width; i++) {
+	for(int j = 0; j < image.height; j++) {
+	    int id = j*image.width+i;
+	    img.setRGB(i,j, image.pixels[id]); 
+	}
+    }
+
+    BufferedImage subimage = img.getSubimage(x, y, w, h);
+
+    try{
+	JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
+	encoder.encode(subimage);
+    }
+    catch(FileNotFoundException e){
+	System.out.println(e);
+    }
+    catch(IOException ioe){
+	System.out.println(ioe);
+    }
+    byte [] a = out.toByteArray();
+    saveBytes(fname,a);
+    println("savedBytes to:  " + fname);
 }
 
 
