@@ -10,32 +10,12 @@ public class TextureFactory {
 
     PImage depthMapToTexture(int[] depthMap, float depthMaxDist) {
 
-	PApplet.println("Number of elements in depthMap:  " + depthMap.length);		    
-	int minValue = 0;
-	int maxValue = 0; 
-					
-	for (int i = 0; i < depthMap.length; i++) {
-	    int currValue = depthMap[i];
-			
-	    // set the minValue at the lowest non-zero value 
-	    if (minValue == 0 && currValue > 0) {
-		minValue = currValue;
-	    }
-						
-	    if (i == 0) {
-		maxValue = currValue;
-	    } else {
-							
-		if (currValue < minValue && currValue > 0) {
-		    minValue = currValue;
-		}
-		if (currValue > maxValue) {
-		    maxValue = currValue;
-		}
-	    }
-	}
-					
-	PApplet.println("DepthMap minValue: " + minValue + "  maxValue: " + maxValue);
+	IntWrapper min = new IntWrapper();
+	IntWrapper max = new IntWrapper();
+
+	ArrayUtils.getMinAndMaxFromIntArray(depthMap, min, max);
+	int minValue = min.getInt();
+	int maxValue = max.getInt();		
 					
 	int scaleFactor = 255 / (maxValue - minValue);
 					
@@ -44,7 +24,7 @@ public class TextureFactory {
 	depthTextureImage.loadPixels();
 					
 	// set pixel color values for texture
-	for (int i = 0; i < 640 * 480; i++) {
+	for (int i = 0; i < depthMap.length; i++) {
 						
 	    int currValue = depthMap[i];
 						
