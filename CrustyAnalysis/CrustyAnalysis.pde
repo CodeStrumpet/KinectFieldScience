@@ -6,6 +6,7 @@ import org.json.*;
 import unlekker.util.*;
 import unlekker.modelbuilder.*;
 import processing.opengl.*;
+import javax.imageio.*;
 
 
 SimpleOpenNI  context; 
@@ -582,7 +583,7 @@ void keyPressed() {
 	}
     } else if (key == 'b') {
 	println("saving RGBImage cropped out of combinedImage for site with ID: " + currSiteID);
-	saveRGBImageFromCombinedImage(currSiteID);
+	saveRGBImageFromCombinedImageWithSiteID(currSiteID);
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -661,55 +662,18 @@ void saveDataForSiteJSON(String siteID) {
 	
     SaveJpg(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
 
-    
-
-
-    /* 
-       String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
-       println("Absolute Path:  " + absolutePath);
-
-       String depthPath = absolutePath + siteID + \\depth_image_" + currSiteID + ".jpg";
-       String rgbPath = absolutePath + "rgb_image_" + currSiteID + ".jpg";
-
-       debugLog = depthPath;
-
-    */
-
-    //opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
-    //opencv.image().save(OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth_" + currSiteID + ".jpg");
-
-    //context.depthImage().save(absolutePath);
-    //String rgbPath = savePath("rgb_image_" + currSiteID + ".jpg");
-    //context.rgbImage().save(rgbPath);
 }
 
-void saveRGBImageFromCombinedImage(String siteID) {
+void saveRGBImageFromCombinedImageWithSiteID(String siteID) {
 
     println("saveRGBImageFromCombinedImage");
      
-    String combinedImagePath = INPUT_DIRECTORY + "//" + siteID + "\\combined_images_" + siteID + ".jpg";
+    String combinedImagePath = INPUT_DIRECTORY + "\\" + siteID + "\\combined_images_" + siteID + ".jpg";
+
     PImage combinedImage = loadImage(combinedImagePath);
-
-    /*
-
-
-    // copy rgb data into opencv buffer
-    opencv.copy(combinedImage, 640 + imageRegionPadding, 0, 640, 480, 0, 0, 640, 480);
-    
-    PImage rgbTexture = new PImage(640, 480, ARGB);
-    rgbTexture.loadPixels();
-
-    int colorValue = 27;
-
-    for (int i = 0; i < 640 * 480; i++) {
-
-	rgbTexture.pixels[i] = color(colorValue, colorValue, colorValue);//opencv.pixels()[i];
-    }
-    */
 	
-    String outputFileName = INPUT_DIRECTORY + "//" + siteID + "\\rgb.jpg";
+    String outputFileName = INPUT_DIRECTORY + "\\" + siteID + "\\rgb.jpg";
 
-    println("about to savePImageJpg");
     saveSubimageJPGFromImage(combinedImage, outputFileName, 640 + imageRegionPadding, 0, 640, 480);
 }
 
@@ -789,7 +753,7 @@ void SaveJpg(String fname){
 
 void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, int h){
 
-    println("saveSubimageJPGFromImage");
+    println("saveSubimageJPGFromImage:  " + fname);
 
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     BufferedImage img = new BufferedImage(image.width, image.height, 2); // 2 for TYPE_INT_ARGB from BufferedImage constants
@@ -806,18 +770,27 @@ void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, i
     BufferedImage subimage = img.getSubimage(x, y, w, h);
 
     try{
-	JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
-	encoder.encode(subimage);
+
+	/*	File outputfile = new File(fname);
+	outputfile.mkdirs();
+	outputfile.createNewFile();
+	ImageIO.write(subimage, "png", outputfile);
+	*/
+
+
+		JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
+		encoder.encode(subimage);
     }
     catch(FileNotFoundException e){
 	System.out.println(e);
     }
     catch(IOException ioe){
 	System.out.println(ioe);
+	ioe.printStackTrace();
     }
-    byte [] a = out.toByteArray();
-    saveBytes(fname,a);
-    println("savedBytes to:  " + fname);
+        byte [] a = out.toByteArray();
+        saveBytes(fname,a);
+        println("savedBytes to:  " + fname);
 }
 
 
