@@ -312,6 +312,12 @@ void processRealWorldPoints() {
 	model.beginShape(TRIANGLES);
     }
 
+    ModelFactory modelFactory = new ModelFactory(this, depthPoints, context, sensorImageWidth, sensorImageHeight, spacing, depthMaxDist);
+
+    modelFactory.cleanUp();
+
+    /*
+
     int cleanedUpPoints = 0;
 
     // cleanup pass
@@ -339,7 +345,10 @@ void processRealWorldPoints() {
 	}
     }
 
+    */
    
+
+
 
     int faceCount = 0;
     for (int y = 0; y < 480 -spacing; y+=spacing) {
@@ -393,7 +402,7 @@ void processRealWorldPoints() {
     
 	    model.endShape();
 	    model.writeSTL(this, OUTPUT_DIRECTORY + "//scan_"+random(1000)+".stl");
-	    println("FaceCount:  " + faceCount + "  FaceNum:  " + model.faceNum + "   Cleaned up Points:  " + cleanedUpPoints);
+	    println("FaceCount:  " + faceCount + "  FaceNum:  " + model.faceNum); //"   Cleaned up Points:  " + cleanedUpPoints);
 	    creatingScannedMesh = false;
 	}
 
