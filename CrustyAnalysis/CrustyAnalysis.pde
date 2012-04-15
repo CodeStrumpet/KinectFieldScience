@@ -67,6 +67,8 @@ int sensorImageHeight = 480;
 void setup()
 {
 
+
+
         // setup window
     windowWidth = sensorImageWidth * 2 + imageRegionPadding;
     windowHeight = sensorImageHeight + textRegionHeight; 
@@ -80,7 +82,6 @@ void setup()
 
     // set the actual window size, enabling OPENGL
     size(windowWidth, windowHeight, OPENGL);
-
 
     // set default values
     setDefaultAdjustmentVariableValues();
@@ -125,6 +126,7 @@ void setup()
     // setup model and vertexList for mesh
     model = new UGeometry();
     vertexList = new UVertexList();
+
 }
 
 void draw()
@@ -164,6 +166,7 @@ void draw()
 	}  
 
     } else {
+
 	// load image if necessary
 	if (updateSourceImage) {
 	    sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
@@ -184,6 +187,15 @@ void draw()
 		    JSONArray depthMap = depthData.getJSONArray("depth_map");
 					
 		    println("Number of elements in depthMap:  " + depthMap.length());
+
+		    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
+
+		    IntWrapper min = new IntWrapper();
+		    IntWrapper max = new IntWrapper();
+
+		    ArrayUtils.getMinAndMaxFromIntArray(sourceDepthPixels, min, max);
+
+		    println("arrayUtils min:  " + min.getInt() + "  max:  " + max.getInt());
 		    
 		    sourceDepthPixels = new int[depthMap.length()];
 					
@@ -771,15 +783,16 @@ void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, i
 
     try{
 
-	/*	File outputfile = new File(fname);
+	/*   ImageIO approach (png save not working yet)
+	File outputfile = new File(fname);
 	outputfile.mkdirs();
 	outputfile.createNewFile();
 	ImageIO.write(subimage, "png", outputfile);
 	*/
 
 
-		JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
-		encoder.encode(subimage);
+	JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
+	encoder.encode(subimage);
     }
     catch(FileNotFoundException e){
 	System.out.println(e);
@@ -788,9 +801,9 @@ void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, i
 	System.out.println(ioe);
 	ioe.printStackTrace();
     }
-        byte [] a = out.toByteArray();
-        saveBytes(fname,a);
-        println("savedBytes to:  " + fname);
+    byte [] a = out.toByteArray();
+    saveBytes(fname,a);
+    println("savedBytes to:  " + fname);
 }
 
 
