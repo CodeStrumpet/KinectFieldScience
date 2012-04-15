@@ -196,51 +196,7 @@ void draw()
 		    // update actual pixels in depthTextureImage
 		    depthTextureImage.updatePixels();
 
-
-		    // create 'depthPoints' array of real world points from captured depth data
-		    depthPoints = new PVector[sensorImageWidth * sensorImageHeight];
-
-		    minValue = 0;
-		    maxValue = 0;
-
-		    for (int y = 0; y < sensorImageHeight; y+=spacing) {
-			for (int x = 0; x < sensorImageWidth; x+= spacing) {
-			    int i = y * sensorImageWidth + x;
-
-			    int currValue = ((Integer)depthMap.get(i)).intValue();
-			    
-			    PVector realWorld = new PVector();
-			    PVector projective = new PVector(x, y, currValue);
-
-			    // translate from x/y to realworld coordinates
-			    context.convertProjectiveToRealWorld(projective, realWorld);  
-
-			    depthPoints[i] = realWorld;
-
-
-			    // set the minValue at the lowest non-zero value 
-			    if (minValue == 0 && (int)realWorld.z > 0) {
-				minValue = (int)realWorld.z;
-			    }
-						
-			    if (i == 0) {
-				maxValue = (int)realWorld.z;
-			    } else {
-							
-				if ((int)realWorld.z < minValue && (int)realWorld.z > 0) {
-				    minValue = (int)realWorld.z;
-				}
-				if ((int)realWorld.z > maxValue) {
-				    maxValue = (int)realWorld.z;
-				}
-			    }
-			}
-		    }
-
-		    println("Real World minValue: " + minValue + "  maxValue: " + maxValue);
-
-		    println("depthPoints size:  " + depthPoints.length);
-
+		    depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
 					
 		} catch (JSONException e) {
 		    println ("There was an error parsing the JSONObject.");
