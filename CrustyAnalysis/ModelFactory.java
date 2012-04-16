@@ -67,7 +67,8 @@ public class ModelFactory {
 	parent.pushMatrix();
 	//translate(-sensorImageWidth, -sensorImageHeight/2, 2000);
 	parent.rotateX(parent.radians(180));
-
+	
+	model.reset();
 	model.beginShape(PApplet.TRIANGLES);
    
 	int faceCount = 0;

@@ -12,9 +12,7 @@ import javax.imageio.*;
 SimpleOpenNI  context; 
 OpenCV opencv;
 
-int spacing = 3;
-UGeometry model;
-UVertexList vertexList;
+int spacing = 3; // determines level of resolution for exported mesh
 
 PFont f;
 int windowWidth = 0; 
@@ -68,18 +66,10 @@ void setup()
 {
 
 
-
         // setup window
     windowWidth = sensorImageWidth * 2 + imageRegionPadding;
     windowHeight = sensorImageHeight + textRegionHeight; 
 	
-    if (windowWidth == imageRegionPadding) {
-	windowWidth += 640 * 2;
-    }
-    if (windowHeight == textRegionHeight) {
-	windowHeight += 480;
-    }
-
     // set the actual window size, enabling OPENGL
     size(windowWidth, windowHeight, OPENGL);
 
@@ -91,7 +81,6 @@ void setup()
     context.setMirror(true); // mirror is by default enabled
     context.alternativeViewPointDepthToImage(); // enable lining up depth and rgb data    
 
-
     // enable depthMap generation (needs to happen after window has been sized)
     if(context.enableDepth() == false) {
 	println("Can't open the depthMap, maybe the camera is not connected!");
@@ -102,7 +91,6 @@ void setup()
 	println("Can't open the rgbMap, maybe the camera is not connected or there is no rgbSensor!");
 	canUseConnectedSensor = false;
     }
-
 
     // set sensorImageWidth and Height from sensor
     if (context.depthWidth() > 0) {
@@ -118,15 +106,9 @@ void setup()
 	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
     }
 
-
     // create OpenCV instance and allocate buffer
     opencv = new OpenCV(this);
     opencv.allocate(sensorImageWidth, sensorImageHeight);
-
-    // setup model and vertexList for mesh
-    model = new UGeometry();
-    vertexList = new UVertexList();
-
 }
 
 void draw()
@@ -169,43 +151,8 @@ void draw()
 
 	// load image if necessary
 	if (updateSourceImage) {
-	    sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
-	    updateSourceImage = false;
-	    println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
-			
-			
-	    // Now replace the source image depth texture with one we create from the raw depth data
-	    String[] rawDepthStrings = loadStrings(INPUT_DIRECTORY + "//" + currSiteID + "\\depth.json");
-	    if (rawDepthStrings != null && rawDepthStrings.length > 0) {
-				
-		int minValue = 0;
-		int maxValue = 0; 
-				
-		// pull raw depth height map out of JSON data
-		try {
-		    JSONObject depthData = new JSONObject(rawDepthStrings[0]); 
-		    JSONArray depthMap = depthData.getJSONArray("depth_map");
-					
-		    println("Number of elements in depthMap:  " + depthMap.length());
-
-		    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
-
-		    TextureFactory textureFactory = new TextureFactory(this);
-		    depthTextureImage = textureFactory.depthMapToTexture(sourceDepthPixels, depthMaxDist);
-
-		    // update actual pixels in depthTextureImage
-		    depthTextureImage.updatePixels();
-
-		    depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
-					
-		} catch (JSONException e) {
-		    println ("There was an error parsing the JSONObject.");
-		}												
-	    } else {
-		println("Failed to load raw depth strings");
-	    }
+	    updateSourceImage();
 	}
-
 
 	// use it if we've got it
 	if (sourceImage != null) {
@@ -229,7 +176,7 @@ void draw()
 		// process and render rgb data
 		processRGBDataInCurrentOpenCVBuffer();
 				
-	    } else { 
+	    } else {  // don't use openCV
 
 		// draw the current source image (depth + rgb capture)
 		image(sourceImage, 0, 0);	       
@@ -251,6 +198,45 @@ void draw()
 
     // draw adjustment variables
     drawAdjustmentVariablesRegion();
+}
+
+
+void updateSourceImage() {
+    sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+    updateSourceImage = false;
+    println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
+			
+			
+    // Now replace the source image depth texture with one we create from the raw depth data
+    String[] rawDepthStrings = loadStrings(INPUT_DIRECTORY + "//" + currSiteID + "\\depth.json");
+    if (rawDepthStrings != null && rawDepthStrings.length > 0) {
+				
+	int minValue = 0;
+	int maxValue = 0; 
+				
+	// pull raw depth height map out of JSON data
+	try {
+	    JSONObject depthData = new JSONObject(rawDepthStrings[0]); 
+	    JSONArray depthMap = depthData.getJSONArray("depth_map");
+					
+	    println("Number of elements in depthMap:  " + depthMap.length());
+
+	    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
+
+	    TextureFactory textureFactory = new TextureFactory(this);
+	    depthTextureImage = textureFactory.depthMapToTexture(sourceDepthPixels, depthMaxDist);
+
+	    // update actual pixels in depthTextureImage
+	    depthTextureImage.updatePixels();
+
+	    depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
+					
+	} catch (JSONException e) {
+	    println ("There was an error parsing the JSONObject.");
+	}												
+    } else {
+	println("Failed to load raw depth strings");
+    }
 }
 
 void processDepthDataInCurrentOpenCVBuffer() {
@@ -403,7 +389,6 @@ void keyPressed() {
 	enableMeshConstruction = !enableMeshConstruction;
     } else if (key == '&') {
 	creatingScannedMesh = true;
-	model.reset();
     } else if (key == '*') {
 	if (currSiteID.length() > 0 && sourceImage != null && sourceDepthPixels != null && sourceDepthPixels.length > 0) {
 	    printDepthArrayToMatrixForCurrenSiteID(sourceDepthPixels);
