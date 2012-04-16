@@ -6,6 +6,7 @@ import org.json.*;
 import unlekker.util.*;
 import unlekker.modelbuilder.*;
 import processing.opengl.*;
+import javax.imageio.*;
 
 
 SimpleOpenNI  context; 
@@ -50,10 +51,12 @@ float minBlobArea = 0.0;
 boolean fillInBlobs = false;
 boolean enableMeshConstruction = false;
 boolean creatingScannedMesh = false;
+boolean saveRGBFrame = false;
 
 boolean canUseConnectedSensor = true;
 PImage sourceImage = null;
 PImage depthTextureImage = null;
+PImage rgbTextureImage = null;
 int[] sourceDepthPixels = null;
 PVector[] depthPoints = null;
 
@@ -63,6 +66,8 @@ int sensorImageHeight = 480;
 
 void setup()
 {
+
+
 
         // setup window
     windowWidth = sensorImageWidth * 2 + imageRegionPadding;
@@ -77,7 +82,6 @@ void setup()
 
     // set the actual window size, enabling OPENGL
     size(windowWidth, windowHeight, OPENGL);
-
 
     // set default values
     setDefaultAdjustmentVariableValues();
@@ -101,8 +105,12 @@ void setup()
 
 
     // set sensorImageWidth and Height from sensor
-    sensorImageWidth = context.depthWidth();
-    sensorImageHeight = context.depthHeight();
+    if (context.depthWidth() > 0) {
+	sensorImageWidth = context.depthWidth();
+    }
+    if (context.depthHeight() > 0) {
+	sensorImageHeight = context.depthHeight();
+    }
 
     println("sensorImageWidth:  " + sensorImageWidth + "  sensorImageHeight:  " + sensorImageHeight);
 
@@ -118,6 +126,7 @@ void setup()
     // setup model and vertexList for mesh
     model = new UGeometry();
     vertexList = new UVertexList();
+
 }
 
 void draw()
@@ -157,6 +166,7 @@ void draw()
 	}  
 
     } else {
+
 	// load image if necessary
 	if (updateSourceImage) {
 	    sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
@@ -177,114 +187,16 @@ void draw()
 		    JSONArray depthMap = depthData.getJSONArray("depth_map");
 					
 		    println("Number of elements in depthMap:  " + depthMap.length());
-		    
-		    sourceDepthPixels = new int[depthMap.length()];
-					
-		    for (int i = 0; i < depthMap.length(); i++) {
-			int currValue = ((Integer)depthMap.get(i)).intValue();
 
-			// store value in global array for additional operations later
-			sourceDepthPixels[i] = currValue;
-			
-			// set the minValue at the lowest non-zero value 
-			if (minValue == 0 && currValue > 0) {
-			    minValue = currValue;
-			}
-						
-			if (i == 0) {
-			    maxValue = currValue;
-			} else {
-							
-			    if (currValue < minValue && currValue > 0) {
-				minValue = currValue;
-			    }
-			    if (currValue > maxValue) {
-				maxValue = currValue;
-			    }
-			}
-		    }
-					
-		    println("DepthMap minValue: " + minValue + "  maxValue: " + maxValue);
-					
-		    int scaleFactor = 255 / (maxValue - minValue);
-					
-		    // create image for texture
-		    depthTextureImage = createImage(640, 480, RGB);
-		    depthTextureImage.loadPixels();
-					
-		    // set pixel color values for texture
-		    for (int i = 0; i < 640 * 480; i++) {
-						
-			int currValue = ((Integer)depthMap.get(i)).intValue();
-						
-			// make sure the currValue is within our distance threshold, and if not then set it to 0
-			if (currValue > depthMaxDist) {
-			    currValue = 0;
-			}
-						
-			/* to create our color value we do the following:
-			 *
-			 * subtract min value (this makes the minimum value now 0)
-			 * multiply by scale factor (the scale factor is the number of times the max value goes into 255) (this now makes the max value 255)
-			 * we would prefer light values to be closer so we flip the scale by subtracting 255 and taking the absolute value (0 goes to 255, 255 goes to 0)  
-			 */					
-			int colorValue = 255;
-			if (currValue > 0) {
-			    colorValue = ((currValue - minValue) * scaleFactor);
-			    //colorValue = Math.abs(((currValue - minValue) * scaleFactor) - 255); // use this one if you want closer values to be lighter	
-			}						
-						
-			depthTextureImage.pixels[i] = color(colorValue, colorValue, colorValue);
-		    }
+		    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
+
+		    TextureFactory textureFactory = new TextureFactory(this);
+		    depthTextureImage = textureFactory.depthMapToTexture(sourceDepthPixels, depthMaxDist);
 
 		    // update actual pixels in depthTextureImage
 		    depthTextureImage.updatePixels();
 
-
-		    // create 'depthPoints' array of real world points from captured depth data
-		    depthPoints = new PVector[sensorImageWidth * sensorImageHeight];
-
-		    minValue = 0;
-		    maxValue = 0;
-
-		    for (int y = 0; y < sensorImageHeight; y+=spacing) {
-			for (int x = 0; x < sensorImageWidth; x+= spacing) {
-			    int i = y * sensorImageWidth + x;
-
-			    int currValue = ((Integer)depthMap.get(i)).intValue();
-			    
-			    PVector realWorld = new PVector();
-			    PVector projective = new PVector(x, y, currValue);
-
-			    // translate from x/y to realworld coordinates
-			    context.convertProjectiveToRealWorld(projective, realWorld);  
-
-			    depthPoints[i] = realWorld;
-
-
-			    // set the minValue at the lowest non-zero value 
-			    if (minValue == 0 && (int)realWorld.z > 0) {
-				minValue = (int)realWorld.z;
-			    }
-						
-			    if (i == 0) {
-				maxValue = (int)realWorld.z;
-			    } else {
-							
-				if ((int)realWorld.z < minValue && (int)realWorld.z > 0) {
-				    minValue = (int)realWorld.z;
-				}
-				if ((int)realWorld.z > maxValue) {
-				    maxValue = (int)realWorld.z;
-				}
-			    }
-			}
-		    }
-
-		    println("Real World minValue: " + minValue + "  maxValue: " + maxValue);
-
-		    println("depthPoints size:  " + depthPoints.length);
-
+		    depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
 					
 		} catch (JSONException e) {
 		    println ("There was an error parsing the JSONObject.");
@@ -366,6 +278,7 @@ void processDepthDataInCurrentOpenCVBuffer() {
 }
 
 void processRGBDataInCurrentOpenCVBuffer() {
+
     opencv.threshold(rgbThreshold);
 
     image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
@@ -390,101 +303,23 @@ void processRGBDataInCurrentOpenCVBuffer() {
 }
 
 void processRealWorldPoints() {
-    fill(255);
-    pushMatrix();
-    //translate(-sensorImageWidth, -sensorImageHeight/2, 2000);
-    rotateX(radians(180));
+
+    ModelFactory modelFactory = new ModelFactory(this, depthPoints, context, sensorImageWidth, sensorImageHeight, spacing, depthMaxDist);
+
+    modelFactory.cleanUp();
 
     if (creatingScannedMesh) {
-	model.beginShape(TRIANGLES);
-    }
+	String outFilePath =  OUTPUT_DIRECTORY + "//scan_"+random(1000)+".stl";	
 
-    int cleanedUpPoints = 0;
+	modelFactory.updateModel();
+	modelFactory.exportMesh(outFilePath);
 
-    // cleanup pass
-    for (int y = 0; y < 480; y+=spacing) {
-	for (int x = 0; x < 640; x+= spacing) {
-	    int i = y * 640 + x;
-	    PVector p = depthPoints[i];
+	creatingScannedMesh = false;
 
-	   
-
-	    // if the point is on the edge or if it has no depth
-	    if (p.z < 10 || p.z > depthMaxDist || y == 0 || y == 480 - spacing || x == 0 || x == 640 - spacing) {
-		// replace it with a point at the depth of the backplane (i.e. depthMaxDist)
-		PVector realWorld = new PVector();
-		PVector projective = new PVector(x, y, depthMaxDist);
-
-		// to get the point in the right place, we need to translate
-		// from x/y to realworld coordinates to match our other points:
-		context.convertProjectiveToRealWorld(projective, realWorld);  // do we have to recreate this every time??
-
-		depthPoints[i] = realWorld;
-
-		cleanedUpPoints++;
-	    }
-	}
-    }
-
-   
-
-    int faceCount = 0;
-    for (int y = 0; y < 480 -spacing; y+=spacing) {
-	for (int x = 0; x < 640 -spacing; x+= spacing) {
-	    int i = y * 640 + x;
-	    
-	    if (creatingScannedMesh) { // only build the mesh if scanning is enabled
-
-		int nw = i;
-		int ne = nw + spacing;
-		int sw = i + 640 * spacing;
-		int se = sw + spacing;
-
-		if (!allZero(depthPoints[nw]) && !allZero(depthPoints[ne]) && !allZero(depthPoints[sw]) && !allZero(depthPoints[se])) {
-		    model.addFace(new UVec3(depthPoints[nw].x, depthPoints[nw].y, depthPoints[nw].z),
-				  new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
-				  new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
-
-		    model.addFace(new UVec3(depthPoints[ne].x, depthPoints[ne].y, depthPoints[ne].z),
-				  new UVec3(depthPoints[se].x, depthPoints[se].y, depthPoints[se].z),
-				  new UVec3(depthPoints[sw].x, depthPoints[sw].y, depthPoints[sw].z));
-
-		    faceCount += 2;
-		}	                
-	   } else { // scanning is disabled, just draw the 3D points
-
-		stroke(255);
-		PVector currentPoint = depthPoints[i];
-		if (currentPoint.z < depthMaxDist) {
-		    point(currentPoint.x, currentPoint.y, currentPoint.z);
-		}
-	    }
-	}
-
-
-    }
-
-	if (creatingScannedMesh) {
-	    model.calcBounds();
-	    model.translate(0, 0, -depthMaxDist);
-
-	    float modelWidth = (model.bb.max.x - model.bb.min.x);
-	    float modelHeight = (model.bb.max.y - model.bb.min.y);
-
-	    UGeometry backing = Primitive.box(modelWidth/2, modelHeight/2, 10);
-	    model.add(backing);
-    
-	    model.scale(0.01);
-	    model.rotateY(radians(180));
-	    model.toOrigin();
-    
-	    model.endShape();
-	    model.writeSTL(this, OUTPUT_DIRECTORY + "//scan_"+random(1000)+".stl");
-	    println("FaceCount:  " + faceCount + "  FaceNum:  " + model.faceNum + "   Cleaned up Points:  " + cleanedUpPoints);
-	    creatingScannedMesh = false;
-	}
-
-    popMatrix();
+    } else {
+	
+	modelFactory.drawDepth();
+    }    
 }
 
 boolean allZero(PVector p) {
@@ -573,6 +408,9 @@ void keyPressed() {
 	if (currSiteID.length() > 0 && sourceImage != null && sourceDepthPixels != null && sourceDepthPixels.length > 0) {
 	    printDepthArrayToMatrixForCurrenSiteID(sourceDepthPixels);
 	}
+    } else if (key == 'b') {
+	println("saving RGBImage cropped out of combinedImage for site with ID: " + currSiteID);
+	saveRGBImageFromCombinedImageWithSiteID(currSiteID);
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -651,68 +489,21 @@ void saveDataForSiteJSON(String siteID) {
 	
     SaveJpg(OUTPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
 
-    /* 
-       String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
-       println("Absolute Path:  " + absolutePath);
-
-       String depthPath = absolutePath + siteID + \\depth_image_" + currSiteID + ".jpg";
-       String rgbPath = absolutePath + "rgb_image_" + currSiteID + ".jpg";
-
-       debugLog = depthPath;
-
-    */
-
-    //opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
-    //opencv.image().save(OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth_" + currSiteID + ".jpg");
-
-    //context.depthImage().save(absolutePath);
-    //String rgbPath = savePath("rgb_image_" + currSiteID + ".jpg");
-    //context.rgbImage().save(rgbPath);
 }
 
+void saveRGBImageFromCombinedImageWithSiteID(String siteID) {
 
-// Placeholder
-void saveDataForSiteCSV(String siteID) {
+    println("saveRGBImageFromCombinedImage");
+     
+    String combinedImagePath = INPUT_DIRECTORY + "\\" + siteID + "\\combined_images_" + siteID + ".jpg";
 
-    String fileName = currSiteID + "\\depth.json"; //"siteID\\depth_" + siteID + ".json";
-    println("Creating file:  " + fileName);
-    PrintWriter depthOut = createWriter(fileName);
+    PImage combinedImage = loadImage(combinedImagePath);
+	
+    String outputFileName = INPUT_DIRECTORY + "\\" + siteID + "\\rgb.jpg";
 
-    depthOut.print("{");
-    printJSONStringStringKeyValuePair("location_id", siteID, depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("depth_width", context.depthWidth(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("depth_height", context.depthHeight(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("rgb_width", context.rgbWidth(), depthOut);
-    depthOut.print(", ");
-    printJSONStringIntKeyValuePair("rgb_height", context.rgbHeight(), depthOut);
-    depthOut.print(", ");
-    depthOut.print("\"depth_map\"");
-    depthOut.print(" : ");
-    printJSONArrayToOutput(context.depthMap(), depthOut);
-    depthOut.print("}");
-    depthOut.flush();
-    depthOut.close();
-
-    SaveJpg(currSiteID + "\\combined_images_" + currSiteID + ".jpg");
-
-    /* 
-       String absolutePath = "C:\\Users\\skamuter\\Documents\\Code\\Processing\\SoilCrusts\\SoilCrustSampler\\";
-       println("Absolute Path:  " + absolutePath);
-
-       String depthPath = absolutePath + siteID + \\depth_image_" + currSiteID + ".jpg";
-       String rgbPath = absolutePath + "rgb_image_" + currSiteID + ".jpg";
-
-       debugLog = depthPath;
-
-    */
-
-    //context.depthImage().save(absolutePath);
-    //String rgbPath = savePath("rgb_image_" + currSiteID + ".jpg");
-    //context.rgbImage().save(rgbPath);
+    saveSubimageJPGFromImage(combinedImage, outputFileName, 640 + imageRegionPadding, 0, 640, 480);
 }
+
 
 void printDepthArrayToMatrixForCurrenSiteID(int[] array) {
     String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
@@ -784,6 +575,50 @@ void SaveJpg(String fname){
     }
     byte [] a = out.toByteArray();
     saveBytes(fname,a);
+}
+
+
+void saveSubimageJPGFromImage(PImage image, String fname, int x, int y, int w, int h){
+
+    println("saveSubimageJPGFromImage:  " + fname);
+
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    BufferedImage img = new BufferedImage(image.width, image.height, 2); // 2 for TYPE_INT_ARGB from BufferedImage constants
+    img = (BufferedImage)createImage(image.width, image.height); // redundant?
+    image.loadPixels();    
+
+    for(int i = 0; i < image.width; i++) {
+	for(int j = 0; j < image.height; j++) {
+	    int id = j*image.width+i;
+	    img.setRGB(i,j, image.pixels[id]); 
+	}
+    }
+
+    BufferedImage subimage = img.getSubimage(x, y, w, h);
+
+    try{
+
+	/*   ImageIO approach (png save not working yet)
+	File outputfile = new File(fname);
+	outputfile.mkdirs();
+	outputfile.createNewFile();
+	ImageIO.write(subimage, "png", outputfile);
+	*/
+
+
+	JPEGImageEncoder encoder = JPEGCodec.createJPEGEncoder(out);
+	encoder.encode(subimage);
+    }
+    catch(FileNotFoundException e){
+	System.out.println(e);
+    }
+    catch(IOException ioe){
+	System.out.println(ioe);
+	ioe.printStackTrace();
+    }
+    byte [] a = out.toByteArray();
+    saveBytes(fname,a);
+    println("savedBytes to:  " + fname);
 }
 
 
