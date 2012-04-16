@@ -17,6 +17,13 @@ http://ubaa.net/shared/processing/opencv/download/01/opencv_01.zip (goes in your
 Then you'll also need to install opencv.  Follow instructions for your platform here:  http://ubaa.net/shared/processing/opencv/
 
 
+Steps to deploy Crust web viewer
+--------------------------------
+- From the base directory:
+$ git submodule init
+$ git submodule update
+
+
 
 Image showing Adjusted Depth Distance Threshold
 -----------------------------------------------
