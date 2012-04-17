@@ -151,7 +151,7 @@ void draw()
 
 	// load image if necessary
 	if (updateSourceImage) {
-	    updateSourceImage();
+	    updateCurrentSourceData(INPUT_DIRECTORY, currSiteID);
 	}
 
 	// use it if we've got it
@@ -201,14 +201,14 @@ void draw()
 }
 
 
-void updateSourceImage() {
-    sourceImage = loadImage(INPUT_DIRECTORY + "//" + currSiteID + "\\combined_images_" + currSiteID + ".jpg");
+void updateCurrentSourceData(String fromDir, String siteID) {
+    sourceImage = loadImage(fromDir + "//" + siteID + "\\combined_images_" + siteID + ".jpg");
     updateSourceImage = false;
     println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
 			
 			
     // Now replace the source image depth texture with one we create from the raw depth data
-    String[] rawDepthStrings = loadStrings(INPUT_DIRECTORY + "//" + currSiteID + "\\depth.json");
+    String[] rawDepthStrings = loadStrings(fromDir + "//" + siteID + "\\depth.json");
     if (rawDepthStrings != null && rawDepthStrings.length > 0) {
 				
 	int minValue = 0;
@@ -238,6 +238,7 @@ void updateSourceImage() {
 	println("Failed to load raw depth strings");
     }
 }
+
 
 void processDepthDataInCurrentOpenCVBuffer() {
 	
@@ -394,8 +395,10 @@ void keyPressed() {
 	    printDepthArrayToMatrixForCurrenSiteID(sourceDepthPixels);
 	}
     } else if (key == 'b') {
-	println("saving RGBImage cropped out of combinedImage for site with ID: " + currSiteID);
-	saveRGBImageFromCombinedImageWithSiteID(currSiteID);
+
+	exportCapturedData(INPUT_DIRECTORY, OUTPUT_DIRECTORY + "\\" + "ExportTest");
+	//println("saving RGBImage cropped out of combinedImage for site with ID: " + currSiteID);
+	//saveRGBImageFromCombinedImageWithSiteID(currSiteID);
     } else {
 	currSiteID = currSiteID + key;
     }
@@ -476,19 +479,74 @@ void saveDataForSiteJSON(String siteID) {
 
 }
 
-void saveRGBImageFromCombinedImageWithSiteID(String siteID) {
+void saveRGBImageFromCombinedImageWithSiteID(String fromDir, String siteID, String toDir) {
 
     println("saveRGBImageFromCombinedImage");
      
-    String combinedImagePath = INPUT_DIRECTORY + "\\" + siteID + "\\combined_images_" + siteID + ".jpg";
+    String combinedImagePath = fromDir + "\\" + siteID + "\\combined_images_" + siteID + ".jpg";
 
     PImage combinedImage = loadImage(combinedImagePath);
 	
-    String outputFileName = INPUT_DIRECTORY + "\\" + siteID + "\\rgb.jpg";
+    String outputFileName = toDir + "\\" + siteID + "\\rgb.jpg";
 
     saveSubimageJPGFromImage(combinedImage, outputFileName, 640 + imageRegionPadding, 0, 640, 480);
 }
 
+void saveCurrentDepthTextureIntoDirectory(String toDir) {
+    saveSubimageJPGFromImage(depthTextureImage, toDir + "//depth.jpg", 0, 0, 640, 480);
+}
+
+void exportCapturedData(String fromDir, String toDir) {
+
+    String[] sites = {"27", "271", "30", "343", "342", "341", "34"};
+
+    for (int i = 0; i < sites.length; i++) {
+	exportSite(fromDir, sites[i], toDir);
+    }
+}
+
+void exportSite(String fromDir, String siteID, String toDir) {
+    
+    String completePath = fromDir + "\\" + siteID;
+
+    saveRGBImageFromCombinedImageWithSiteID(fromDir, siteID, toDir);
+    updateCurrentSourceData(fromDir, siteID);
+
+    // export depth texture
+
+    // export model	    
+}
+
+// This function returns all the files in a directory as an array of File objects
+File[] listFiles(String dir) {
+    File file = new File(dir);
+    if (file.isDirectory()) {
+	File[] files = file.listFiles();
+	return files;
+    } else {
+	// If it's not a directory
+	return null;
+    }
+}
+
+// This function returns all the files in a directory as an array of Strings  
+String[] listFileNames(String dir, boolean onlyReturnDirectories) {
+  File file = new File(dir);
+  if (file.isDirectory() || !onlyReturnDirectories) {
+    String names[] = file.list();
+    return names;
+  } else {
+    // If it's not a directory
+    return null;
+  }
+}
+
+void printContentsOfDirectory(String dir) {
+    String[] fileNames = listFileNames(dir, false);
+    for (int i = 0; i < fileNames.length; i++) {
+	println(fileNames[i]);
+    }
+}
 
 void printDepthArrayToMatrixForCurrenSiteID(int[] array) {
     String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
