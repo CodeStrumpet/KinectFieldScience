@@ -356,11 +356,13 @@ void keyPressed() {
     } else if (key == '<' || key == ',') { // depthMaxDist
 	if (depthMaxDist - depthMaxDistIncrementValue >= depthMaxDistMinValue) {
 	    depthMaxDist -= depthMaxDistIncrementValue;
+	    updateSourceImage = true;
 	} 
 	println("leftSign");
     } else if (key == '>' || key == '.') { // depthMaxDist
 	if (depthMaxDist + depthMaxDistIncrementValue <= depthMaxDistMaxValue) {
 	    depthMaxDist += depthMaxDistIncrementValue;
+	    updateSourceImage = true;
 	} 
 	println("rightSign");
     } else if (key == ';' || key == ':') {
