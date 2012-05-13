@@ -21,8 +21,8 @@ int imageRegionPadding = 10;
 int textRegionHeight = 300;
 String debugLog = "";
 
-final String OUTPUT_DIRECTORY = "data\\output\\PostZZYZX";
-final String INPUT_DIRECTORY = "data\\output";
+final String OUTPUT_DIRECTORY = "data/output/PostZZYZX";  //"data\\output\\PostZZYZX";
+final String INPUT_DIRECTORY = "data/output";  //"data\\output";
 
 final String SITE_ID_KEY = "siteID";
 final String USE_SENSOR_CAPTURE_STREAM = "useSensorCaptureStream  ('/')";
@@ -51,7 +51,8 @@ boolean enableMeshConstruction = false;
 boolean creatingScannedMesh = false;
 boolean saveRGBFrame = false;
 
-boolean canUseConnectedSensor = true;
+boolean tryToUseConnectedSensor = false;
+boolean canUseConnectedSensor = false;
 PImage sourceImage = null;
 PImage depthTextureImage = null;
 PImage rgbTextureImage = null;
@@ -76,6 +77,7 @@ void setup()
     // set default values
     setDefaultAdjustmentVariableValues();
 
+if (tryToUseConnectedSensor) {
     // create kinect context and setup options
     context = new SimpleOpenNI(this);
     context.setMirror(true); // mirror is by default enabled
@@ -85,6 +87,8 @@ void setup()
     if(context.enableDepth() == false) {
 	println("Can't open the depthMap, maybe the camera is not connected!");
 	canUseConnectedSensor = false;
+    } else {
+      canUseConnectedSensor = true;
     }
     // enable rgb generation (needs to happen after window has been sized)
     if(context.enableRGB() == false) {
@@ -100,12 +104,13 @@ void setup()
 	sensorImageHeight = context.depthHeight();
     }
 
+
     println("sensorImageWidth:  " + sensorImageWidth + "  sensorImageHeight:  " + sensorImageHeight);
 
     if (context.depthWidth() != context.rgbWidth() || context.depthHeight() != context.rgbHeight()) {
 	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
     }
-
+}
     // create OpenCV instance and allocate buffer
     opencv = new OpenCV(this);
     opencv.allocate(sensorImageWidth, sensorImageHeight);
@@ -202,13 +207,15 @@ void draw()
 
 
 void updateCurrentSourceData(String fromDir, String siteID) {
-    sourceImage = loadImage(fromDir + "//" + siteID + "\\combined_images_" + siteID + ".jpg");
+    //sourceImage = loadImage(fromDir + "//" + siteID + "\\combined_images_" + siteID + ".jpg");
+    sourceImage = loadImage(fromDir + "/" + siteID + "/combined_images_" + siteID + ".jpg");
     updateSourceImage = false;
     println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
 			
 			
     // Now replace the source image depth texture with one we create from the raw depth data
-    String[] rawDepthStrings = loadStrings(fromDir + "//" + siteID + "\\depth.json");
+    //String[] rawDepthStrings = loadStrings(fromDir + "//" + siteID + "\\depth.json");
+    String[] rawDepthStrings = loadStrings(fromDir + "/" + siteID + "/depth.json");
     if (rawDepthStrings != null && rawDepthStrings.length > 0) {
 				
 	int minValue = 0;
@@ -229,8 +236,9 @@ void updateCurrentSourceData(String fromDir, String siteID) {
 	    // update actual pixels in depthTextureImage
 	    depthTextureImage.updatePixels();
 
-	    depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
-					
+      if (tryToUseConnectedSensor) {
+	      depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
+			}
 	} catch (JSONException e) {
 	    println ("There was an error parsing the JSONObject.");
 	}												
