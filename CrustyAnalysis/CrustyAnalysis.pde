@@ -231,7 +231,7 @@ void updateCurrentSourceData(String fromDir, String siteID) {
 	    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
 
 	    TextureFactory textureFactory = new TextureFactory(this);
-	    depthTextureImage = textureFactory.depthMapToTexture(sourceDepthPixels, depthMaxDist);
+	    depthTextureImage = textureFactory.depthMapToTextureOld(sourceDepthPixels, depthMaxDist, sensorImageWidth, sensorImageHeight);
 
 	    // update actual pixels in depthTextureImage
 	    depthTextureImage.updatePixels();
@@ -418,7 +418,7 @@ void keyPressed() {
 int depthMaxDistMinValue = 300;
 int depthMaxDistMaxValue = 3000;
 int depthMaxDistIncrementValue = 50;
-int depthMaxDistDefaultValue = 650; // default
+int depthMaxDistDefaultValue = 750; // default
 
 int depthThresholdMinValue = 0;
 int depthThresholdMaxValue = 255;
@@ -559,23 +559,23 @@ void printContentsOfDirectory(String dir) {
 }
 
 void printDepthArrayToMatrixForCurrenSiteID(int[] array) {
-    String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
-    println("Creating file:  " + fileName);
-    PrintWriter out = createWriter(fileName);
+  String fileName = OUTPUT_DIRECTORY + "//" + currSiteID + "\\depth2D.csv"; 
+  println("Creating file:  " + fileName);
+  PrintWriter out = createWriter(fileName);
 
-    for (int y = 0; y < sensorImageHeight; y++) {
-	for (int x = 0; x < sensorImageWidth; x++) {
-	    if (x == 0) {
-		out.print(array[y * sensorImageWidth]);
-	    } else if (x == sensorImageWidth - 1) {
-		out.print(", " + array[sensorImageWidth * y + x]);
-		out.println("");
-	    } else {
-		out.print(", " + array[sensorImageWidth * y + x]);
-	    }   
-	}
+  for (int y = 0; y < sensorImageHeight; y++) {
+    for (int x = 0; x < sensorImageWidth; x++) {
+      if (x == 0) {
+        out.print(array[y * sensorImageWidth]);
+        } else if (x == sensorImageWidth - 1) {
+          out.print(", " + array[sensorImageWidth * y + x]);
+          out.println("");
+          } else {
+            out.print(", " + array[sensorImageWidth * y + x]);
+          }   
+        }
+      }
     }
-}
 
 void printJSONArrayToOutput(int [] array, PrintWriter out) {
     out.print("[");
