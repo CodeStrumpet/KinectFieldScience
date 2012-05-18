@@ -61,7 +61,26 @@ public class TextureFactory {
     for (int yOffset = 0; yOffset < origImage.height; yOffset += windowHeight) {
       for (int xOffset = 0; xOffset < origImage.width; xOffset += windowWidth) {
         PImage subImage = origImage.get(xOffset, yOffset, windowWidth, windowHeight);
-        parent.println("subimage");
+        subImage.loadPixels();
+        IntWrapper min = new IntWrapper();
+        IntWrapper max = new IntWrapper();
+        getMinAndMaxFromGrayColorArray(subImage.pixels, min, max);
+        int minValue = min.getInt();
+        int maxValue = max.getInt();
+        
+        //parent.println("subimage(" + xOffset + ", " + yOffset + "):  " + minValue + " min, " + maxValue + " max");*/
+        
+        
+        for (int i = 0; i < subImage.pixels.length; i++) {
+          subImage.pixels[i] = (int)parent.map(subImage.pixels[i], minValue, maxValue, 0, 255);
+        }
+        subImage.updatePixels();
+        
+        getMinAndMaxFromGrayColorArray(subImage.pixels, min, max);
+        minValue = min.getInt();
+        maxValue = max.getInt();
+        
+        //parent.println("subimage after update(" + xOffset + ", " + yOffset + "):  " + minValue + " min, " + maxValue + " max");
         
       }      
     }
@@ -105,6 +124,36 @@ public class TextureFactory {
     return depthTextureImage;
   }
 
+
+  public void getMinAndMaxFromGrayColorArray(int[] array, IntWrapper min, IntWrapper max) {
+
+    int minValue       = 0;
+    int maxValue       = 0;
+
+    for (int i         = 0; i < array.length; i++) {
+      int currValue  =  (array[i] >> 16) & 0xFF; // extract red value
+
+      // set the minValue at the lowest non-zero value 
+      if (minValue == 0 && currValue > 0) {
+        minValue          = currValue;
+      }
+
+      if (i == 0) {
+        maxValue          = currValue;
+        } else {
+
+          if (currValue < minValue && currValue > 0) {
+            minValue      = currValue;
+          }
+          if (currValue > maxValue) {
+            maxValue      = currValue;
+          }
+        }
+      }
+
+      min.setInt(minValue);
+      max.setInt(maxValue);					
+    }
 
   
 }
