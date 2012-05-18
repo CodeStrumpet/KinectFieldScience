@@ -72,9 +72,33 @@ public class TextureFactory {
         
         
         for (int i = 0; i < subImage.pixels.length; i++) {
-          subImage.pixels[i] = (int)parent.map(subImage.pixels[i], minValue, maxValue, 0, 255);
+          
+          int currValue = 0;
+          
+          boolean lightCrusts = true;
+          
+          int redValue = (subImage.pixels[i] >> 16) & 0xFF;
+          
+          if (lightCrusts) {
+            currValue = (int)parent.map(redValue, minValue, maxValue, 0, 255);
+          } else {
+            currValue = Math.abs((int)parent.map(redValue, minValue, maxValue, 0, 255) - 255);
+          }
+          
+          subImage.pixels[i] = parent.color(currValue, currValue, currValue);
         }
         subImage.updatePixels();
+        
+        //parent.image(subImage, xOffset, yOffset);
+        
+        
+        origImage.loadPixels();
+        
+        for (int y = 0; y < subImage.height; y++) {
+          for (int x = 0; x < subImage.width; x++) {
+            origImage.set(xOffset + x, yOffset + y, subImage.get(x, y));
+          }
+        }
         
         getMinAndMaxFromGrayColorArray(subImage.pixels, min, max);
         minValue = min.getInt();
@@ -84,6 +108,7 @@ public class TextureFactory {
         
       }      
     }
+    origImage.updatePixels();
     
     return origImage;
   }
