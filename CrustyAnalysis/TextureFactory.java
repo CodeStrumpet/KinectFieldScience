@@ -48,11 +48,11 @@ public class TextureFactory {
         //colorValue = Math.abs(((currValue - minValue) * scaleFactor) - 255); // use this one if you want closer values to be lighter	
       }						
 
-      depthTextureImage.pixels[i] = parent.color(colorValue, colorValue, colorValue);
+      depthTextureImage.pixels[i] = parent.color(colorValue);
 
     }
     
-    recomposePImage(depthTextureImage, 10, 10);
+//    recomposePImage(depthTextureImage, 40, 40);
 
     return depthTextureImage;
   }
@@ -68,6 +68,11 @@ public class TextureFactory {
         int minValue = min.getInt();
         int maxValue = max.getInt();
         
+        boolean disregardPixels = false;
+        if (false && maxValue - minValue < 20) {
+          disregardPixels = true;
+        }
+        
         //parent.println("subimage(" + xOffset + ", " + yOffset + "):  " + minValue + " min, " + maxValue + " max");*/
         
         
@@ -75,14 +80,23 @@ public class TextureFactory {
           
           int currValue = 0;
           
-          boolean lightCrusts = true;
+          boolean lightCrusts = false;
           
           int redValue = (subImage.pixels[i] >> 16) & 0xFF;
           
           if (lightCrusts) {
-            currValue = (int)parent.map(redValue, minValue, maxValue, 0, 255);
+            if (disregardPixels) {
+              currValue = 0;
+            } else {
+              currValue = Math.abs((int)parent.map(redValue, minValue, maxValue, 0, 255) - 255);              
+            }
           } else {
-            currValue = Math.abs((int)parent.map(redValue, minValue, maxValue, 0, 255) - 255);
+            if (disregardPixels) {
+              currValue = 255;
+            } else {
+              currValue = (int)parent.map(redValue, minValue, maxValue, 0, 255);              
+            }
+
           }
           
           subImage.pixels[i] = parent.color(currValue, currValue, currValue);

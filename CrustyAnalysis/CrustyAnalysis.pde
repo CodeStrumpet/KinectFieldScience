@@ -35,6 +35,9 @@ final String MIN_BLOB_AREA_KEY = "minBlobArea";
 final String FILL_IN_BLOBS_KEY = "fillInBlobs ('[')";
 final String ENABLE_MESH_CONSTRUCTION = "enableMeshConstruction ('%')";
 final String CREATING_SCANNED_MESH = "save mesh ('&')";
+final String DEPTH_CONTRAST_KEY = "depthContrast ('q', 'w')";
+final String DEPTH_BRIGHTNESS_KEY = "depthBrightness ('e', 'r')";
+final
 
 String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION, CREATING_SCANNED_MESH};
 
@@ -43,7 +46,11 @@ boolean useSensorCaptureStream = false;
 boolean updateSourceImage = true;
 float depthMaxDist = 0.0;
 float depthThreshold = 0.0;
+float depthContrast = 0.0;
+float depthBrightness = 0.0;
 float rgbThreshold = 0.0;
+float rgbContrast = 0.0;
+float rgbBrightness = 0.0;
 boolean enableOpenCV = false;
 float minBlobArea = 0.0;
 boolean fillInBlobs = false;
@@ -254,7 +261,7 @@ void processDepthDataInCurrentOpenCVBuffer() {
 	
     image(opencv.image(), 0, 0, 640, 480);
 
-    Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+    Blob blobs[] = opencv.blobs(10, 40*40, 300, true, OpenCV.MAX_VERTICES*4 );
     // draw blob results
     for( int i=0; i<blobs.length; i++ ) {
 	beginShape();
