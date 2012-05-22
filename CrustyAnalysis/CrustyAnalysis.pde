@@ -7,7 +7,7 @@ import unlekker.util.*;
 import unlekker.modelbuilder.*;
 import processing.opengl.*;
 import javax.imageio.*;
-
+import controlP5.*;
 
 SimpleOpenNI  context; 
 OpenCV opencv;
@@ -37,7 +37,7 @@ final String ENABLE_MESH_CONSTRUCTION = "enableMeshConstruction ('%')";
 final String CREATING_SCANNED_MESH = "save mesh ('&')";
 final String DEPTH_CONTRAST_KEY = "depthContrast ('q', 'w')";
 final String DEPTH_BRIGHTNESS_KEY = "depthBrightness ('e', 'r')";
-final
+
 
 String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION, CREATING_SCANNED_MESH};
 
@@ -70,9 +70,14 @@ PVector[] depthPoints = null;
 int sensorImageWidth = 640; 
 int sensorImageHeight = 480;
 
+// UI Controller
+ControlP5 cp5;
+
+// JSON Config object
+JSONObject config;
+
 void setup()
 {
-
 
         // setup window
     windowWidth = sensorImageWidth * 2 + imageRegionPadding;
@@ -80,9 +85,15 @@ void setup()
 	
     // set the actual window size, enabling OPENGL
     size(windowWidth, windowHeight, OPENGL);
+    
+    // construct UI Controller
+    cp5 = new ControlP5(this);
 
     // set default values
     setDefaultAdjustmentVariableValues();
+    
+    setupAdjustmentVariableControls();
+
 
 if (tryToUseConnectedSensor) {
     // create kinect context and setup options
@@ -214,45 +225,45 @@ void draw()
 
 
 void updateCurrentSourceData(String fromDir, String siteID) {
-    //sourceImage = loadImage(fromDir + "//" + siteID + "\\combined_images_" + siteID + ".jpg");
-    sourceImage = loadImage(fromDir + "/" + siteID + "/combined_images_" + siteID + ".jpg");
-    updateSourceImage = false;
-    println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
-			
-			
-    // Now replace the source image depth texture with one we create from the raw depth data
-    //String[] rawDepthStrings = loadStrings(fromDir + "//" + siteID + "\\depth.json");
-    String[] rawDepthStrings = loadStrings(fromDir + "/" + siteID + "/depth.json");
-    if (rawDepthStrings != null && rawDepthStrings.length > 0) {
-				
-	int minValue = 0;
-	int maxValue = 0; 
-				
-	// pull raw depth height map out of JSON data
-	try {
-	    JSONObject depthData = new JSONObject(rawDepthStrings[0]); 
-	    JSONArray depthMap = depthData.getJSONArray("depth_map");
-					
-	    println("Number of elements in depthMap:  " + depthMap.length());
+  //sourceImage = loadImage(fromDir + "//" + siteID + "\\combined_images_" + siteID + ".jpg");
+  sourceImage = loadImage(fromDir + "/" + siteID + "/combined_images_" + siteID + ".jpg");
+  updateSourceImage = false;
+  println(sourceImage == null ? "failed to load sourceImage" : "loaded source image");
 
-	    sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
 
-	    TextureFactory textureFactory = new TextureFactory(this);
-	    depthTextureImage = textureFactory.depthMapToTextureOld(sourceDepthPixels, depthMaxDist, sensorImageWidth, sensorImageHeight);
+  // Now replace the source image depth texture with one we create from the raw depth data
+  //String[] rawDepthStrings = loadStrings(fromDir + "//" + siteID + "\\depth.json");
+  String[] rawDepthStrings = loadStrings(fromDir + "/" + siteID + "/depth.json");
+  if (rawDepthStrings != null && rawDepthStrings.length > 0) {
 
-	    // update actual pixels in depthTextureImage
-	    depthTextureImage.updatePixels();
+    int minValue = 0;
+    int maxValue = 0; 
+
+    // pull raw depth height map out of JSON data
+    try {
+      JSONObject depthData = new JSONObject(rawDepthStrings[0]); 
+      JSONArray depthMap = depthData.getJSONArray("depth_map");
+
+      println("Number of elements in depthMap:  " + depthMap.length());
+
+      sourceDepthPixels = ArrayUtils.getIntArrayFromJSONArray(depthMap);
+
+      TextureFactory textureFactory = new TextureFactory(this);
+      depthTextureImage = textureFactory.depthMapToTextureOld(sourceDepthPixels, depthMaxDist, sensorImageWidth, sensorImageHeight);
+
+      // update actual pixels in depthTextureImage
+      depthTextureImage.updatePixels();
 
       if (tryToUseConnectedSensor) {
-	      depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
-			}
-	} catch (JSONException e) {
-	    println ("There was an error parsing the JSONObject.");
-	}												
-    } else {
-	println("Failed to load raw depth strings");
+        depthPoints = OpenNIUtils.realWorldPointsFromDepthMap(sourceDepthPixels, sensorImageWidth, sensorImageHeight, spacing, context);
+      }
+      } catch (JSONException e) {
+        println ("There was an error parsing the JSONObject.");
+      }												
+      } else {
+        println("Failed to load raw depth strings");
+      }
     }
-}
 
 
 void processDepthDataInCurrentOpenCVBuffer() {
@@ -326,29 +337,6 @@ void processRealWorldPoints() {
 
 boolean allZero(PVector p) {
   return (p.x == 0 && p.y == 0 && p.z == 0);
-}
-
-void drawAdjustmentVariablesRegion() {
-
-    fill(30, 30, 30);
-    rect(0, windowHeight - textRegionHeight, windowWidth, windowHeight);
-
-    int variableNameColumnWidth = 175;
-    int rowHeight = textRegionHeight / adjustmentVariableNames.length;
-    int leftPadding = 15; 
-    int startPosition = windowHeight - textRegionHeight;
-
-    fill(255);  
-    for (int i = 0; i < adjustmentVariableNames.length; i++) {
-	int yPosition = i * rowHeight + rowHeight/2;
-
-	// draw variable name column
-	text(adjustmentVariableNames[i], leftPadding, startPosition + yPosition);
-
-	// draw variable value column
-	text(adjustmentVariableValueForVariableName(adjustmentVariableNames[i]), leftPadding + variableNameColumnWidth, startPosition + yPosition);
-    }    
-
 }
 
 void keyPressed() { 
@@ -449,16 +437,102 @@ boolean fillInBlobsDefaultValue = true;
 boolean enableMeshConstructionDefaultValue = false;
 
 void setDefaultAdjustmentVariableValues() {
-    depthMaxDist = depthMaxDistDefaultValue;
-    depthThreshold = depthThresholdDefaultValue;
-    rgbThreshold = rgbThresholdDefaultValue;
-    minBlobArea = minBlobAreaDefaultValue;
+  depthMaxDist = depthMaxDistDefaultValue;
+  depthThreshold = depthThresholdDefaultValue;
+  rgbThreshold = rgbThresholdDefaultValue;
+  minBlobArea = minBlobAreaDefaultValue;
 
-    enableOpenCV = enableOpenCVDefaultValue;
-    useSensorCaptureStream = useSensorCaptureStreamDefaultValue;
-    updateSourceImage = updateSourceImageDefaultValue;
-    fillInBlobs = fillInBlobsDefaultValue;
-    enableMeshConstruction = enableMeshConstructionDefaultValue;
+  enableOpenCV = enableOpenCVDefaultValue;
+  useSensorCaptureStream = useSensorCaptureStreamDefaultValue;
+  updateSourceImage = updateSourceImageDefaultValue;
+  fillInBlobs = fillInBlobsDefaultValue;
+  enableMeshConstruction = enableMeshConstructionDefaultValue;
+
+  String configFileName = "config.json";
+
+  // populate global JSONConfig object
+  String[] configStrings = loadStrings("config.json");
+  if (configStrings != null && configStrings.length > 0) {
+
+    try {
+      String joinedConfig = join(configStrings, "\r");
+      
+      config = new JSONObject(joinedConfig);
+    
+    } catch (JSONException e) {
+      println ("There was an error parsing the JSONObject  : " + e);
+    
+    }		
+  }
+}
+
+void setupAdjustmentVariableControls() {
+  
+  Slider depthMaxDistSlider = getSliderWithVarName("depthMaxDist");
+  Slider depthBrightnessSlider = getSliderWithVarName("depthBrightness");
+  Slider depthContrastSlider = getSliderWithVarName("depthContrast");
+  Slider depthThresholdSlider = getSliderWithVarName("depthThreshold");
+  Slider rgbBrightnessSlider = getSliderWithVarName("rgbBrightness");
+  Slider rgbContrastSlider = getSliderWithVarName("rgbContrast");
+  Slider rgbThresholdSlider = getSliderWithVarName("rgbThreshold");
+  
+  controlP5.Controller[] controllers = {depthMaxDistSlider, depthBrightnessSlider, depthContrastSlider, depthThresholdSlider,
+    rgbBrightnessSlider, rgbContrastSlider, rgbThresholdSlider};
+    
+  int columnSize = 300;
+  int currColumn = 1;
+  
+  int rowHeight = textRegionHeight / controllers.length;
+  int leftPadding = 15; 
+  int topPadding = 20;
+  int startPosition = windowHeight - textRegionHeight + topPadding;
+  
+
+  
+  for (int i = 0; i < controllers.length; i++) {
+    int yPosition = i * rowHeight; // + rowHeight/2;
+    controllers[i].setPosition(columnSize * currColumn + leftPadding, startPosition + yPosition);
+  }
+    
+}
+
+Slider getSliderWithVarName(String sliderVarName) {
+  
+  Slider slider = cp5.addSlider(sliderVarName);
+  try {
+    JSONObject sliderJSON = config.getJSONObject(sliderVarName);
+    
+    slider.setRange(sliderJSON.getInt("min"), sliderJSON.getInt("max"));
+    slider.setValue(sliderJSON.getInt("default"));
+    slider.setSize(200, 20);
+   } catch (JSONException e) {
+     println ("There was an error getting JSON values for: " + sliderVarName + "  e: " + e);
+   }
+   return slider;
+}
+
+
+void drawAdjustmentVariablesRegion() {
+
+    fill(30, 30, 30);
+    rect(0, windowHeight - textRegionHeight, windowWidth, windowHeight);
+
+    int variableNameColumnWidth = 175;
+    int rowHeight = textRegionHeight / adjustmentVariableNames.length;
+    int leftPadding = 15; 
+    int startPosition = windowHeight - textRegionHeight;
+
+    fill(255);  
+    for (int i = 0; i < adjustmentVariableNames.length; i++) {
+	int yPosition = i * rowHeight + rowHeight/2;
+
+	// draw variable name column
+	text(adjustmentVariableNames[i], leftPadding, startPosition + yPosition);
+
+	// draw variable value column
+	text(adjustmentVariableValueForVariableName(adjustmentVariableNames[i]), leftPadding + variableNameColumnWidth, startPosition + yPosition);
+    }    
+
 }
 
 
