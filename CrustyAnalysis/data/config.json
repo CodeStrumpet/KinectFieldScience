@@ -1,8 +1,8 @@
 {"depthMaxDist" : {"group" : "General", "type" : "Slider", "default" : 800, "min" : 300, "max" : 3000}, 
     "depthBrightness" : {"type" : "SliderBoolean", "default" : 0, "min" : -128, "max" : 128},
     "depthContrast" : {"type" : "SliderBoolean", "default" : 0, "min" : -128, "max" : 128},
-    "depthThreshold" : {"type" : "SliderBoolean", "default" : 255, "min" : 0, "max" : 255},
+    "depthThreshold" : {"type" : "SliderBoolean", "default" : 0, "min" : 0, "max" : 255},
     "rgbBrightness" : {"type" : "SliderBoolean", "default" : 0, "min" : -128, "max" : 128},
     "rgbContrast" : {"type" : "SliderBoolean", "default" : 0, "min" : -128, "max" : 128},
-    "rgbThreshold" : {"type" : "SliderBoolean", "default" : 255, "min" : 0, "max" : 255},
+    "rgbThreshold" : {"type" : "SliderBoolean", "default" : 0, "min" : 0, "max" : 255},
 }

@@ -41,6 +41,10 @@ final String DEPTH_BRIGHTNESS_KEY = "depthBrightness ('e', 'r')";
 
 String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDATE_SOURCE_IMAGE, DEPTH_MAX_DIST_KEY, DEPTH_THRESHOLD_KEY, RGB_THRESHOLD_KEY, ENABLE_OPEN_CV, MIN_BLOB_AREA_KEY, FILL_IN_BLOBS_KEY, ENABLE_MESH_CONSTRUCTION, CREATING_SCANNED_MESH};
 
+String[] floatAdjustmentVariableNames = {"depthMaxDist", "depthBrightness", "depthContrast", "depthThreshold",
+                                        "rgbBrightness", "rgbContrast", "rgbThreshold"};
+
+
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
 boolean updateSourceImage = true;
@@ -267,7 +271,9 @@ void updateCurrentSourceData(String fromDir, String siteID) {
 
 
 void processDepthDataInCurrentOpenCVBuffer() {
-	
+	  
+	  opencv.brightness((int)depthBrightness);
+	  opencv.contrast((int)depthContrast);
     opencv.threshold(depthThreshold);
 	
     image(opencv.image(), 0, 0, 640, 480);
@@ -291,7 +297,9 @@ void processDepthDataInCurrentOpenCVBuffer() {
 }
 
 void processRGBDataInCurrentOpenCVBuffer() {
-
+    
+    opencv.brightness((int)rgbBrightness);
+    opencv.contrast((int)rgbContrast);
     opencv.threshold(rgbThreshold);
 
     image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
@@ -437,11 +445,8 @@ boolean fillInBlobsDefaultValue = true;
 boolean enableMeshConstructionDefaultValue = false;
 
 void setDefaultAdjustmentVariableValues() {
-  depthMaxDist = depthMaxDistDefaultValue;
-  depthThreshold = depthThresholdDefaultValue;
-  rgbThreshold = rgbThresholdDefaultValue;
+  
   minBlobArea = minBlobAreaDefaultValue;
-
   enableOpenCV = enableOpenCVDefaultValue;
   useSensorCaptureStream = useSensorCaptureStreamDefaultValue;
   updateSourceImage = updateSourceImageDefaultValue;
@@ -467,18 +472,13 @@ void setDefaultAdjustmentVariableValues() {
 }
 
 void setupAdjustmentVariableControls() {
+  int i;
   
-  Slider depthMaxDistSlider = getSliderWithVarName("depthMaxDist");
-  Slider depthBrightnessSlider = getSliderWithVarName("depthBrightness");
-  Slider depthContrastSlider = getSliderWithVarName("depthContrast");
-  Slider depthThresholdSlider = getSliderWithVarName("depthThreshold");
-  Slider rgbBrightnessSlider = getSliderWithVarName("rgbBrightness");
-  Slider rgbContrastSlider = getSliderWithVarName("rgbContrast");
-  Slider rgbThresholdSlider = getSliderWithVarName("rgbThreshold");
+  controlP5.Controller[] controllers = new controlP5.Controller[floatAdjustmentVariableNames.length];
+  for (i = 0; i < floatAdjustmentVariableNames.length; i++) {
+    controllers[i] = getSliderWithVarName(floatAdjustmentVariableNames[i]);
+  }
   
-  controlP5.Controller[] controllers = {depthMaxDistSlider, depthBrightnessSlider, depthContrastSlider, depthThresholdSlider,
-    rgbBrightnessSlider, rgbContrastSlider, rgbThresholdSlider};
-    
   int columnSize = 300;
   int currColumn = 1;
   
@@ -487,9 +487,8 @@ void setupAdjustmentVariableControls() {
   int topPadding = 20;
   int startPosition = windowHeight - textRegionHeight + topPadding;
   
-
   
-  for (int i = 0; i < controllers.length; i++) {
+  for (i = 0; i < controllers.length; i++) {
     int yPosition = i * rowHeight; // + rowHeight/2;
     controllers[i].setPosition(columnSize * currColumn + leftPadding, startPosition + yPosition);
   }
