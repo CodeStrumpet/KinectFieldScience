@@ -10,7 +10,8 @@ import javax.imageio.*;
 import controlP5.*;
 
 SimpleOpenNI  context; 
-OpenCV opencv;
+OpenCV opencvDepth;
+OpenCV opencvRGB;
 
 int spacing = 3; // determines level of resolution for exported mesh
 
@@ -144,9 +145,12 @@ if (tryToUseConnectedSensor) {
 	println("Warning:  SimpleOpenNI depth and rgb images do not have the same dimensions, this will probably be a problem");
     }
 }
-    // create OpenCV instance and allocate buffer
-    opencv = new OpenCV(this);
-    opencv.allocate(sensorImageWidth, sensorImageHeight);
+    // create OpenCV instances and allocate buffer
+    opencvDepth = new OpenCV(this);
+    opencvDepth.allocate(sensorImageWidth, sensorImageHeight);
+    
+    opencvRGB = new OpenCV(this);
+    opencvRGB.allocate(sensorImageWidth, sensorImageHeight);
 }
 
 void draw()
@@ -159,13 +163,13 @@ void draw()
 
 	if (enableOpenCV) {
 	    // copy depth data into opencv buffer
-	    opencv.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+	    opencvDepth.copy(context.depthImage(), 0, 0, 640, 480, 0, 0, 640, 480);
 			
 	    // process and render depth data
 	    processDepthDataInCurrentOpenCVBuffer();
 	
 	    // copy rgb data into opencv buffer
-	    opencv.copy(context.rgbImage(), 0, 0, 640, 480, 0, 0, 640, 480);
+	    opencvRGB.copy(context.rgbImage(), 0, 0, 640, 480, 0, 0, 640, 480);
 			
 	    // process and render RGB data
 	    processRGBDataInCurrentOpenCVBuffer();
@@ -199,9 +203,9 @@ void draw()
 				
 				// copy depth data into opencv buffer
 		if (depthTextureImage != null) {					
-		    opencv.copy(depthTextureImage, 0, 0, 640, 480, 0, 0, 640, 480);
+		    opencvDepth.copy(depthTextureImage, 0, 0, 640, 480, 0, 0, 640, 480);
 		} else {
-		    opencv.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
+		    opencvDepth.copy(sourceImage, 0, 0, 640, 480, 0, 0, 640, 480);
 		}
 				
 				
@@ -209,7 +213,7 @@ void draw()
 		processDepthDataInCurrentOpenCVBuffer();
 				
 		// copy rgb data into opencv buffer
-		opencv.copy(sourceImage, 640 + imageRegionPadding, 0, 640, 480, 0, 0, 640, 480);
+		opencvRGB.copy(sourceImage, 640 + imageRegionPadding, 0, 640, 480, 0, 0, 640, 480);
 				
 		// process and render rgb data
 		processRGBDataInCurrentOpenCVBuffer();
@@ -283,18 +287,18 @@ void updateCurrentSourceData(String fromDir, String siteID) {
 
 void processDepthDataInCurrentOpenCVBuffer() {
 	  if (depthBrightnessOn) {
-	    opencv.brightness((int)depthBrightness);	    
+	    opencvDepth.brightness((int)depthBrightness);	    
 	  }
     if (depthContrastOn) {
-	    opencv.contrast((int)depthContrast);      
+	    opencvDepth.contrast((int)depthContrast);      
     }
     if (depthThresholdOn) {
-      opencv.threshold(depthThreshold);      
+      opencvDepth.threshold(depthThreshold);      
     }
 	
-    image(opencv.image(), 0, 0, 640, 480);
+    image(opencvDepth.image(), 0, 0, 640, 480);
 
-    Blob blobs[] = opencv.blobs(10, 40*40, 300, true, OpenCV.MAX_VERTICES*4 );
+    Blob blobs[] = opencvDepth.blobs(10, 40*40, 300, true, OpenCV.MAX_VERTICES*4 );
     // draw blob results
     for( int i=0; i<blobs.length; i++ ) {
 	beginShape();
@@ -314,18 +318,18 @@ void processDepthDataInCurrentOpenCVBuffer() {
 
 void processRGBDataInCurrentOpenCVBuffer() {
     if (rgbBrightnessOn) {
-	    opencv.brightness((int)rgbBrightness);	    
+	    opencvRGB.brightness((int)rgbBrightness);	    
 	  }
     if (rgbContrastOn) {
-	    opencv.contrast((int)rgbContrast);      
+	    opencvRGB.contrast((int)rgbContrast);      
     }
     if (rgbThresholdOn) {
-      opencv.threshold(rgbThreshold);      
+      opencvRGB.threshold(rgbThreshold);      
     }
 
-    image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
+    image(opencvRGB.image(), 640 + imageRegionPadding, 0, 640, 480);
 
-    Blob blobs[] = opencv.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
+    Blob blobs[] = opencvRGB.blobs(10, width*height/2, 100, true, OpenCV.MAX_VERTICES*4 );
 
     // draw blob results
     for( int i=0; i<blobs.length; i++ ) {
