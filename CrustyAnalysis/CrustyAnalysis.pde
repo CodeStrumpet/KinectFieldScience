@@ -44,6 +44,10 @@ String[] adjustmentVariableNames = {SITE_ID_KEY, USE_SENSOR_CAPTURE_STREAM, UPDA
 String[] floatAdjustmentVariableNames = {"depthMaxDist", "depthBrightness", "depthContrast", "depthThreshold",
                                         "rgbBrightness", "rgbContrast", "rgbThreshold"};
 
+String[] adjustmentVariableEnabledNames = {"depthBrightnessOn", "depthContrastOn", "depthThresholdOn",
+                                          "rgbBrightnessOn", "rgbContrastOn", "rgbThresholdOn"};                                        
+
+
 
 String currSiteID = "";
 boolean useSensorCaptureStream = false;
@@ -55,6 +59,13 @@ float depthBrightness = 0.0;
 float rgbThreshold = 0.0;
 float rgbContrast = 0.0;
 float rgbBrightness = 0.0;
+boolean depthThresholdOn = false;
+boolean depthContrastOn = false;
+boolean depthBrightnessOn = false;
+boolean rgbThresholdOn = false;
+boolean rgbContrastOn = false;
+boolean rgbBrightnessOn = false;
+
 boolean enableOpenCV = false;
 float minBlobArea = 0.0;
 boolean fillInBlobs = false;
@@ -271,10 +282,15 @@ void updateCurrentSourceData(String fromDir, String siteID) {
 
 
 void processDepthDataInCurrentOpenCVBuffer() {
-	  
-	  opencv.brightness((int)depthBrightness);
-	  opencv.contrast((int)depthContrast);
-    opencv.threshold(depthThreshold);
+	  if (depthBrightnessOn) {
+	    opencv.brightness((int)depthBrightness);	    
+	  }
+    if (depthContrastOn) {
+	    opencv.contrast((int)depthContrast);      
+    }
+    if (depthThresholdOn) {
+      opencv.threshold(depthThreshold);      
+    }
 	
     image(opencv.image(), 0, 0, 640, 480);
 
@@ -297,10 +313,15 @@ void processDepthDataInCurrentOpenCVBuffer() {
 }
 
 void processRGBDataInCurrentOpenCVBuffer() {
-    
-    opencv.brightness((int)rgbBrightness);
-    opencv.contrast((int)rgbContrast);
-    opencv.threshold(rgbThreshold);
+    if (rgbBrightnessOn) {
+	    opencv.brightness((int)rgbBrightness);	    
+	  }
+    if (rgbContrastOn) {
+	    opencv.contrast((int)rgbContrast);      
+    }
+    if (rgbThresholdOn) {
+      opencv.threshold(rgbThreshold);      
+    }
 
     image(opencv.image(), 640 + imageRegionPadding, 0, 640, 480);
 
@@ -475,8 +496,24 @@ void setupAdjustmentVariableControls() {
   int i;
   
   controlP5.Controller[] controllers = new controlP5.Controller[floatAdjustmentVariableNames.length];
+  controlP5.Controller[] toggles = new controlP5.Controller[floatAdjustmentVariableNames.length];
+  
   for (i = 0; i < floatAdjustmentVariableNames.length; i++) {
     controllers[i] = getSliderWithVarName(floatAdjustmentVariableNames[i]);
+    
+    // add toggle controller if necessary
+    int toggleIndex = -1;
+    for (int j = 0; j < adjustmentVariableEnabledNames.length; j++) {
+      if ((floatAdjustmentVariableNames[i] + "On").equalsIgnoreCase(adjustmentVariableEnabledNames[j])) {
+        toggleIndex = j;
+        println("toggle found!");
+        break;
+      }
+    }
+    if (toggleIndex >= 0) {
+      toggles[i] = cp5.addToggle(adjustmentVariableEnabledNames[toggleIndex]).setSize(50,20);
+    }
+    
   }
   
   int columnSize = 300;
@@ -484,13 +521,16 @@ void setupAdjustmentVariableControls() {
   
   int rowHeight = textRegionHeight / controllers.length;
   int leftPadding = 15; 
-  int topPadding = 20;
+  int topPadding = 5;
   int startPosition = windowHeight - textRegionHeight + topPadding;
   
   
   for (i = 0; i < controllers.length; i++) {
     int yPosition = i * rowHeight; // + rowHeight/2;
     controllers[i].setPosition(columnSize * currColumn + leftPadding, startPosition + yPosition);
+    if (toggles[i] != null) {
+      toggles[i].setPosition(columnSize * currColumn + leftPadding + controllers[i].getWidth() + 10, startPosition + yPosition);
+    }
   }
     
 }
@@ -504,6 +544,11 @@ Slider getSliderWithVarName(String sliderVarName) {
     slider.setRange(sliderJSON.getInt("min"), sliderJSON.getInt("max"));
     slider.setValue(sliderJSON.getInt("default"));
     slider.setSize(200, 20);
+    
+    // reposition the Label
+    slider.getValueLabel().align(ControlP5.LEFT, ControlP5.BOTTOM_OUTSIDE).setPaddingX(0);
+    slider.getCaptionLabel().align(ControlP5.RIGHT, ControlP5.BOTTOM_OUTSIDE).setPaddingX(0);
+    
    } catch (JSONException e) {
      println ("There was an error getting JSON values for: " + sliderVarName + "  e: " + e);
    }

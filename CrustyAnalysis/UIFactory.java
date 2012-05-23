@@ -45,3 +45,14 @@ public class UIFactory {
    
 }
   
+/*
+
+public enum GUIGroupType {
+Slider,
+SliderBoolean,  // <SliderNameOn>
+Text,
+TextButton, // <onTextName>
+Button // <onButtonName>
+}
+
+*/
